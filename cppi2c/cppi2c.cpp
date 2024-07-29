@@ -95,7 +95,7 @@ std::string I2c::WriteReadRegister(i2c_master_dev_handle_t i2c_dev,std::string w
     return rxData;
 }
 
-uint8_t I2c::WriteRead1Byte(i2c_master_dev_handle_t i2c_dev, uint8_t writeData, int xfer_timeout_ms)
+uint8_t I2c::WriteReadByte(i2c_master_dev_handle_t i2c_dev, uint8_t writeData, int xfer_timeout_ms)
 {
     uint8_t rxBuf;
     
@@ -104,7 +104,7 @@ uint8_t I2c::WriteRead1Byte(i2c_master_dev_handle_t i2c_dev, uint8_t writeData, 
     return rxBuf;
 }
 
-uint16_t I2c::WriteRead2Bytes(i2c_master_dev_handle_t i2c_dev, uint8_t writeData, int xfer_timeout_ms)
+uint16_t I2c::WriteReadWord(i2c_master_dev_handle_t i2c_dev, uint8_t writeData, int xfer_timeout_ms)
 {
     uint8_t rxBuf[2];
     

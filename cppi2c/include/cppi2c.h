@@ -39,8 +39,8 @@ public:
     std::string ReadRegister(i2c_master_dev_handle_t i2c_dev, size_t read_size, int xfer_timeout_ms = -1); 
     std::string WriteReadRegister(i2c_master_dev_handle_t i2c_dev,std::string writeData, size_t read_size, int xfer_timeout_ms = -1);
 
-    uint8_t WriteRead1Byte(i2c_master_dev_handle_t i2c_dev,uint8_t writeData, int xfer_timeout_ms = -1);
-    uint16_t WriteRead2Bytes(i2c_master_dev_handle_t i2c_dev,uint8_t writeData, int xfer_timeout_ms = -1);
+    uint8_t WriteReadByte(i2c_master_dev_handle_t i2c_dev,uint8_t writeData, int xfer_timeout_ms = -1);
+    uint16_t WriteReadWord(i2c_master_dev_handle_t i2c_dev,uint8_t writeData, int xfer_timeout_ms = -1);
     
     esp_err_t WriteRegister(i2c_master_dev_handle_t i2c_dev, std::string writeData, int xfer_timeout_ms = -1);
 
