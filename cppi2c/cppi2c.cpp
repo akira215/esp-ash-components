@@ -1,5 +1,6 @@
 #include "cppi2c.h"
 #include <stdexcept>
+#include <algorithm>
 
 I2c::I2c(i2c_port_t port, 
         uint8_t sda_io_num,
@@ -44,6 +45,7 @@ I2c::~I2c()
     i2c_del_master_bus(_bus_handle);
 }
 
+
 i2c_master_dev_handle_t I2c::addDevice(uint16_t device_address, 
                                     uint32_t clk_speed_hz,
                                     i2c_addr_bit_len_t dev_addr_length,
@@ -69,6 +71,15 @@ i2c_master_dev_handle_t I2c::addDevice(uint16_t device_address,
 
     _devices.emplace_back(dev_handle);
     return dev_handle;
+}
+
+esp_err_t I2c::removeDevice(i2c_master_dev_handle_t dev_handle)
+{
+    esp_err_t status = ESP_OK;
+    status = i2c_master_bus_rm_device(dev_handle);
+
+    _devices.erase(std::remove(_devices.begin(), _devices.end(), dev_handle), _devices.end());
+    return status;
 }
 
 std::string I2c::ReadRegister(i2c_master_dev_handle_t i2c_dev,size_t read_size, int xfer_timeout_ms)

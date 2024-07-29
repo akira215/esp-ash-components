@@ -35,6 +35,7 @@ public:
                                     i2c_addr_bit_len_t dev_addr_length = I2C_ADDR_BIT_LEN_7,
                                     uint32_t timeout_us = 0,
                                     bool ack_check = true);
+    esp_err_t removeDevice(i2c_master_dev_handle_t dev_handle);
 
     std::string ReadRegister(i2c_master_dev_handle_t i2c_dev, size_t read_size, int xfer_timeout_ms = -1); 
     std::string WriteReadRegister(i2c_master_dev_handle_t i2c_dev,std::string writeData, size_t read_size, int xfer_timeout_ms = -1);
