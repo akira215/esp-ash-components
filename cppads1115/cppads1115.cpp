@@ -2,11 +2,14 @@
 //#include <driver/i2c.h>
 #include <esp_log.h>
 #include <string.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 
 #include "cppads1115.h"
 
 static const char *ADS_TAG = "ADS1115";
 
+/*
 typedef struct {
    uint16_t reg_cfg;
    uint8_t rw_buff[2];
@@ -19,6 +22,7 @@ static esp_err_t ADS1115_read_to_rwbuff(uint8_t reg_adr);          // Move these
 static esp_err_t ADS1115_write_reg(uint16_t val, uint16_t reg);    // Move these to the header file if you need additional r/w capabilities
 static esp_err_t i2c_handle_write(uint8_t dev_adr, uint8_t w_adr, uint8_t w_len, uint8_t *buff) ;
 static esp_err_t i2c_handle_read(uint8_t dev_adr, uint8_t r_adr, uint8_t r_len, uint8_t *buff);
+
 
 //inline implementations
 extern inline esp_err_t ADS1115_request_single_ended_AIN0();
@@ -33,12 +37,24 @@ extern inline esp_err_t ADS1115_request_diff_AIN2_AIN3();
 
 static inline esp_err_t ADS1115_set_lo_thresh(uint16_t value);
 static inline esp_err_t ADS1115_set_hi_thresh(uint16_t value);
-
-Ads1115::Ads1115(I2c* i2c_master, Ads1115::address dev_address)
+*/
+Ads1115::Ads1115(I2c* i2c_master, Ads1115::addr_t dev_address)
 {
     esp_log_level_set(ADS_TAG, ADS1115_DEBUG_LEVEL);
     _i2c_master = i2c_master;
     _dev_handle = _i2c_master->addDevice(dev_address,400000);
+
+    _config.bit.OS = 1; // always start conversion
+    _config.bit.MUX = MUX_0_1;
+    _config.bit.PGA = FSR_2_048;
+    _config.bit.MODE = MODE_SINGLE;
+    _config.bit.DR = SPS_128;
+    _config.bit.COMP_MODE = 0;
+    _config.bit.COMP_POL = 0;
+    _config.bit.COMP_LAT = 0;
+    _config.bit.COMP_QUE = 0b11;
+
+    _cfg_changed = true;
 }
 
 Ads1115::~Ads1115()
@@ -46,30 +62,166 @@ Ads1115::~Ads1115()
     _i2c_master->removeDevice(_dev_handle);
 }
 
-uint16_t Ads1115::readConfig()
+const Ads1115::Cfg_reg& Ads1115::getConfig()
 {
-    return _i2c_master->WriteReadWord(_dev_handle,addr_reg_configuration);
+    return _config;
+}
+
+void Ads1115::setConfig(const Ads1115::Cfg_reg& config)
+{
+    _config.reg = config.reg;
+    _cfg_changed = true;
+}
+
+void Ads1115::setMux(Ads1115::mux_t mux) {
+  _config.bit.MUX = mux;
+  _cfg_changed = true;
+}
+
+void Ads1115::setPga(Ads1115::fsr_t fsr) {
+  _config.bit.PGA = fsr;
+  _cfg_changed = true;
+}
+
+void Ads1115::setMode(Ads1115::mode_t mode) {
+  _config.bit.MODE = mode;
+  _cfg_changed = true;
+}
+
+void Ads1115::setSps(Ads1115::sps_t sps) {
+  _config.bit.DR = sps;
+  _cfg_changed = true;
+}
+
+esp_err_t Ads1115::writeRegister(Ads1115::reg_addr_t reg, Ads1115::reg2Bytes_t data)
+{
+    esp_err_t err;
+    uint8_t write[3]= { reg, data.MSB, data.LSB };
+
+    err = _i2c_master->WriteRegister(_dev_handle, write, 3); 
+    return err;
+}
+
+Ads1115::reg2Bytes_t Ads1115::readRegister(Ads1115::reg_addr_t reg)
+{
+    Ads1115::reg2Bytes_t data;
+
+    data.reg = _i2c_master->WriteReadWord(_dev_handle, reg);
+
+    return data;
+}
+
+uint16_t Ads1115::getRaw(Ads1115::mux_t inputs) {
+    const static uint16_t sps[] = {8,16,32,64,128,250,475,860};
+        /*
+    if(ads->rdy_pin.in_use) {
+        gpio_isr_handler_add(ads->rdy_pin.pin, gpio_isr_handler, (void*)ads->rdy_pin.gpio_evt_queue);
+        xQueueReset(ads->rdy_pin.gpio_evt_queue);
+    }
+    */
+    esp_err_t err;
+    _config.bit.MUX = inputs;
+    err = writeRegister(reg_configuration , _config.reg);
+
+    if(err) {
+        ESP_LOGE(ADS_TAG,"could not write to device: %s",esp_err_to_name(err));
+        /*
+        if(ads->rdy_pin.in_use) {
+            gpio_isr_handler_remove(ads->rdy_pin.pin);
+            xQueueReset(ads->rdy_pin.gpio_evt_queue);
+        }
+        */
+        return 0;
+    }
+
+    if(false/*ads->rdy_pin.in_use*/) {
+        /*
+        xQueueReceive(ads->rdy_pin.gpio_evt_queue, &tmp, portMAX_DELAY);
+        gpio_isr_handler_remove(ads->rdy_pin.pin);
+        */
+    }
+    else {
+        // wait for 1 ms longer than the sampling rate, plus a little bit for rounding
+        vTaskDelay((((1000/sps[_config.bit.DR]) + 1) / portTICK_PERIOD_MS)+1);
+        bool test = isBusy();
+        if(test)
+            ESP_LOGE(ADS_TAG,"Device is busy");
+    }
+
+    reg2Bytes_t res = readRegister(reg_conversion);
+    return res.reg;
+
+}
+
+double Ads1115::getVoltage(Ads1115::mux_t inputs) {
+  const double fsr[] = {6.144, 4.096, 2.048, 1.024, 0.512, 0.256};
+  const int16_t bits = (1L<<15)-1;
+  int16_t raw;
+
+  raw = getRaw(inputs);
+  return (double)raw * fsr[_config.bit.PGA] / (double)bits;
 }
 
 
+uint16_t Ads1115::getRaw() {
+  const static uint16_t sps[] = {8,16,32,64,128,250,475,860};
+  const static uint8_t len = 2;
+  uint8_t data[2];
+  esp_err_t err;
+  bool tmp; // temporary bool for reading from queue
 /*
-esp_err_t ADS1115_initiate(uint8_t dev_addr, uint16_t reg_cfg)
-{
-    esp_log_level_set(ADS_TAG, ADS1115_DEBUG_LEVEL);   
+  if(ads->rdy_pin.in_use) {
+    gpio_isr_handler_add(ads->rdy_pin.pin, gpio_isr_handler, (void*)ads->rdy_pin.gpio_evt_queue);
+    xQueueReset(ads->rdy_pin.gpio_evt_queue);
+  }
+  */
 
-    return ADS1115_set_config(dev_addr, reg_cfg);
-} 
+ 
+    // see if we need to send configuration data
+    if((_config.bit.MODE==MODE_SINGLE) || (_cfg_changed)) { // if it's single-ended or a setting changed
+        err = writeRegister(reg_configuration , _config.reg); 
+        if(err) {
+            ESP_LOGE(ADS_TAG,"could not write to device: %s",esp_err_to_name(err));
+            /*
+            if(ads->rdy_pin.in_use) {
+                gpio_isr_handler_remove(ads->rdy_pin.pin);
+                xQueueReset(ads->rdy_pin.gpio_evt_queue);
+            }
+            */
+            return 0;
+        }
+        _cfg_changed = false; // say that the data is unchanged now
+    }
 
-esp_err_t ADS1115_set_config(uint8_t dev_addr, uint16_t reg_cfg)
-{
-    if(dev_addr == 0x00) 
-        dev_addr = ADS111X_ADDR_GND;
+    if(false/*ads->rdy_pin.in_use*/) {
+        /*
+        xQueueReceive(ads->rdy_pin.gpio_evt_queue, &tmp, portMAX_DELAY);
+        gpio_isr_handler_remove(ads->rdy_pin.pin);
+        */
+    }
+    else {
+        // wait for 1 ms longer than the sampling rate, plus a little bit for rounding
+        vTaskDelay((((1000/sps[_config.bit.DR]) + 1) / portTICK_PERIOD_MS)+1);
+        bool test = isBusy();
+        if(test)
+            ESP_LOGE(ADS_TAG,"Device is busy");
+    }
+
+    reg2Bytes_t res = readRegister(reg_conversion);
+    return res.reg;
+}
+
+bool Ads1115::isBusy(){
+    Cfg_reg cfg_reg;
+    cfg_reg.reg = Ads1115::readRegister(reg_configuration);
+    if(cfg_reg.bit.OS == 1)
+        return false;
     
-    ads_cfg.dev_addr = dev_addr;
-    ads_cfg.reg_cfg = reg_cfg;
+    return true;
+}
 
-    return ESP_OK;    
-} 
+/*
+
 
 bool ADS1115_get_conversion_state()
 {
@@ -112,59 +264,4 @@ esp_err_t ADS1115_set_ready_pin()
     return r;
 }
 
-static esp_err_t ADS1115_write_reg(uint16_t val, uint16_t reg)
-{  
-    ads_cfg.rw_buff[0] = (uint8_t)(val >> 8) & 0xFF;
-    ads_cfg.rw_buff[1] = (uint8_t)val & 0xFF;
-
-    return i2c_handle_write(ads_cfg.dev_addr, reg, 2, ads_cfg.rw_buff);
-}
-
-static esp_err_t ADS1115_read_to_rwbuff(uint8_t reg_adr)
-{
-    return i2c_handle_read(ads_cfg.dev_addr, reg_adr, 2, ads_cfg.rw_buff);
-}
-
-static esp_err_t i2c_handle_write(uint8_t dev_adr, uint8_t w_adr, uint8_t w_len, uint8_t *buff) 
-{
-  esp_err_t ret_err = ESP_OK;
-
-  i2c_cmd_handle_t cmd = i2c_cmd_link_create();
-  ret_err += i2c_master_start(cmd);    
-
-  ret_err += i2c_master_write_byte(cmd, (dev_adr << 1) | I2C_MASTER_WRITE, true);
-  ret_err += i2c_master_write_byte(cmd, w_adr, true);
-  ret_err += i2c_master_write(cmd, buff, w_len, true);
-  ret_err += i2c_master_stop(cmd);
-
-  ret_err += i2c_master_cmd_begin(I2C_NUM_0, cmd, pdMS_TO_TICKS(500));
-  i2c_cmd_link_delete(cmd);
-  
-  return ret_err;
-}
-
-static esp_err_t i2c_handle_read(uint8_t dev_adr, uint8_t r_adr, uint8_t r_len, uint8_t *buff) 
-{
-  memset(buff, 0, sizeof(*buff));
-  
-  i2c_cmd_handle_t cmd = i2c_cmd_link_create();
-  esp_err_t ret_err = ESP_OK;
-
-  ret_err += i2c_master_start(cmd);
-
-  ret_err += i2c_master_write_byte(cmd, (dev_adr << 1) | I2C_MASTER_WRITE, true);
-  ret_err += i2c_master_write_byte(cmd, r_adr, true);
-  ret_err += i2c_master_start(cmd);
-  ret_err += i2c_master_write_byte(cmd, (dev_adr << 1) | I2C_MASTER_READ, true);
-
-  if (r_len > 1)
-      ret_err += i2c_master_read(cmd, buff, r_len-1, I2C_MASTER_ACK);        
-  ret_err += i2c_master_read_byte(cmd, buff + r_len-1, I2C_MASTER_NACK);
-  ret_err += i2c_master_stop(cmd);
-
-  ret_err += i2c_master_cmd_begin(I2C_NUM_0, cmd, pdMS_TO_TICKS(500));
-  i2c_cmd_link_delete(cmd);    
-
-  return ret_err; 
-}
 */

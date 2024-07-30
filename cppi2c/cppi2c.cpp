@@ -132,3 +132,18 @@ esp_err_t I2c::WriteRegister(i2c_master_dev_handle_t i2c_dev,std::string writeDa
 
     return i2c_master_transmit(i2c_dev, write, writeData.length(), xfer_timeout_ms);
 }
+
+esp_err_t I2c::WriteRegister(i2c_master_dev_handle_t i2c_dev, uint8_t* writeData, size_t data_size, int xfer_timeout_ms)
+{
+    return i2c_master_transmit(i2c_dev, writeData, data_size, xfer_timeout_ms);
+}
+
+esp_err_t I2c::WriteByte(i2c_master_dev_handle_t i2c_dev, uint8_t writeData, int xfer_timeout_ms)
+{
+    return i2c_master_transmit(i2c_dev, &writeData, 1, xfer_timeout_ms);
+}
+esp_err_t I2c::WriteWord(i2c_master_dev_handle_t i2c_dev, uint16_t writeData, int xfer_timeout_ms)
+{
+    const uint8_t* write = reinterpret_cast<const uint8_t*>(&writeData);
+    return i2c_master_transmit(i2c_dev, write, 2, xfer_timeout_ms);
+}

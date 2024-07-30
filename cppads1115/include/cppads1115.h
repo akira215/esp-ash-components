@@ -9,11 +9,12 @@
 
 /* Device Address -------------------------------- */
 //#define ADS1115_DEF_DEV_ADR 0b1001000 >> 1 // 0x48 
+/*
 #define ADS111X_ADDR_GND      0x48 //!< I2C device address with ADDR pin connected to ground
 #define ADS111X_ADDR_VCC      0x49 //!< I2C device address with ADDR pin connected to VCC
 #define ADS111X_ADDR_SDA      0x4a //!< I2C device address with ADDR pin connected to SDA
 #define ADS111X_ADDR_SCL      0x4b //!< I2C device address with ADDR pin connected to SCL
-
+*/
 /* Address Pointer Register ---------------------- */
 /*
 #define ADS1115_REG_CONV                  0x00
@@ -26,6 +27,7 @@
 #define ADS1115_CONV_RESULT               0x0000
 
 /* Config Register ------------------------------- */
+/*
 // Most Significant Byte //
 #define ADS1115_CFG_MS_OS_ACTIVE          0x8000  // when reading, 1 is busy, 0 is ready. When writing, starts a covnersion from powerdown state
 #define ADS1115_CFG_MS_MUX_OMASK          0x8F00  // mask out
@@ -68,7 +70,7 @@
 #define ADS1115_CFG_LS_COMP_QUE_TWO       0x01
 #define ADS1115_CFG_LS_COMP_QUE_FOUR      0x02
 #define ADS1115_CFG_LS_COMP_QUE_DIS       0x03   // default; disable comparator and set ALERT/RDY pin to high-impedance
-
+*/
 /* Lo_tresh / Hi_thresh Register ---------------- */
 #define ADS1115_THRESH_VALUE_MASK         0xFFF0
 #define ADS1115_RDY_HI_THRESH_VALUE       0x8000 // Set the most-significant bit of the Hi_thresh register to 1
@@ -79,25 +81,106 @@
 class Ads1115
 {
     public:
-        enum address : uint16_t
+        typedef enum : uint16_t
         {
             Addr_Gnd = 0x48,
             Addr_Vcc = 0x49,
             Addr_Sda = 0x4a,
             Addr_Scl = 0x4b
-        };
+        } addr_t;
+
+        typedef enum : uint8_t
+        {
+            reg_conversion      = 0x00,
+            reg_configuration   = 0x01,
+            reg_lo_thresh       = 0x02,
+            reg_hi_thresh       = 0x03
+        } reg_addr_t;
+
+        typedef enum { // multiplex options
+            MUX_0_1 = 0, // default
+            MUX_0_3,
+            MUX_1_3,
+            MUX_2_3,
+            MUX_0_GND,
+            MUX_1_GND,
+            MUX_2_GND,
+            MUX_3_GND,
+        } mux_t;
+
+        typedef enum { // full-scale resolution options
+            FSR_6_144 = 0,
+            FSR_4_096,
+            FSR_2_048, // default
+            FSR_1_024,
+            FSR_0_512,
+            FSR_0_256,
+        } fsr_t;
+
+        typedef enum {
+            MODE_CONTINUOUS = 0,
+            MODE_SINGLE // default
+        } mode_t;
+
+        typedef enum { // samples per second
+            SPS_8 = 0,
+            SPS_16,
+            SPS_32,
+            SPS_64,
+            SPS_128, // default
+            SPS_250,
+            SPS_475,
+            SPS_860
+        } sps_t;
+
+        typedef union { 
+            struct {
+                uint8_t LSB;
+                uint8_t MSB;
+            };
+            uint16_t reg;
+        } reg2Bytes_t;
+
+        typedef union { // configuration register
+            struct {
+                uint16_t COMP_QUE:2;  // bits 0..  1  Comparator queue and disable
+                uint16_t COMP_LAT:1;  // bit  2       Latching Comparator
+                uint16_t COMP_POL:1;  // bit  3       Comparator Polarity
+                uint16_t COMP_MODE:1; // bit  4       Comparator Mode
+                uint16_t DR:3;        // bits 5..  7  Data rate
+                uint16_t MODE:1;      // bit  8       Device operating mode
+                uint16_t PGA:3;       // bits 9..  11 Programmable gain amplifier configuration
+                uint16_t MUX:3;       // bits 12.. 14 Input multiplexer configuration
+                uint16_t OS:1;        // bit  15      Operational status or single-shot conversion start
+            } bit;
+            //uint16_t reg;
+            reg2Bytes_t reg;
+        } Cfg_reg;
         
-        Ads1115(I2c* i2c_master, address dev_address);
+        Ads1115(I2c* i2c_master, addr_t dev_address);
         ~Ads1115();
 
-        uint16_t readConfig();
+        const Cfg_reg& getConfig();
+        void setConfig(const Cfg_reg& config);
+
+        esp_err_t writeRegister(reg_addr_t reg, reg2Bytes_t data);
+        reg2Bytes_t readRegister(reg_addr_t reg);
+
+        void setMux(mux_t mux);
+        void setPga(fsr_t fsr);
+        void setMode(mode_t mode);
+        void setSps(sps_t sps);
+
+        uint16_t    getRaw();
+        uint16_t    getRaw(mux_t inputs);
+        double      getVoltage(mux_t inputs);
+
+        bool isBusy();
     private:
         i2c_master_dev_handle_t _dev_handle;
         I2c*                    _i2c_master;
-        constexpr static uint8_t addr_reg_conversion    = 0x00;
-        constexpr static uint8_t addr_reg_configuration = 0x01;
-        constexpr static uint8_t addr_reg_lo_thresh     = 0x02;
-        constexpr static uint8_t addr_reg_hi_thresh     = 0x03;
+        Cfg_reg                 _config;
+        bool                    _cfg_changed;
 };
 
 
