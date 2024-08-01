@@ -1,6 +1,9 @@
 #pragma once
 
 #include "cppi2c.h"
+//#include "driver/gpio.h"
+#include "esp_event.h"
+#include "cppgpio.h"
 
 #include <esp_err.h>
 
@@ -78,6 +81,8 @@
 
 #define BYTES_INT(A,B) (((A << 8) & 0xFF00) | B)
 
+//ESP_EVENT_DECLARE_BASE(INPUT_EVENTS);
+
 class Ads1115
 {
     public:
@@ -109,12 +114,12 @@ class Ads1115
         } mux_t;
 
         typedef enum { // full-scale resolution options
-            FSR_6_144 = 0,
-            FSR_4_096,
-            FSR_2_048, // default
-            FSR_1_024,
-            FSR_0_512,
-            FSR_0_256,
+            FSR_6_144 = 0,          // resolution = 0.1875mV/bit
+            FSR_4_096,              // resolution = 0.125mV/bit  
+            FSR_2_048, // default   // resolution = 0.0625mV/bit
+            FSR_1_024,              // resolution = 0.03125mV/bit
+            FSR_0_512,              // resolution = 0.015625mV/bit
+            FSR_0_256,              // resolution = 0.0078125mV/bit
         } fsr_t;
 
         typedef enum {
@@ -156,7 +161,8 @@ class Ads1115
             //uint16_t reg;
             reg2Bytes_t reg;
         } Cfg_reg;
-        
+
+
         Ads1115(I2c* i2c_master, addr_t dev_address);
         ~Ads1115();
 
@@ -176,11 +182,21 @@ class Ads1115
         double      getVoltage(mux_t inputs);
 
         bool isBusy();
+        void setReadyPin(const gpio_num_t gpio, esp_event_handler_t callback);
+        void removeReadyPin();
+
+        static void IRAM_ATTR isr_handler(void* arg);
+
+        esp_event_loop_handle_t _loop_handle {}; // check to move private
+
     private:
         i2c_master_dev_handle_t _dev_handle;
         I2c*                    _i2c_master;
         Cfg_reg                 _config;
         bool                    _cfg_changed;
+        bool                    _useReadyPin;
+        mux_t                   _inputs;
+        GpioInput               _readyGpio;
 };
 
 

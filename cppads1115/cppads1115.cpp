@@ -9,35 +9,17 @@
 
 static const char *ADS_TAG = "ADS1115";
 
-/*
-typedef struct {
-   uint16_t reg_cfg;
-   uint8_t rw_buff[2];
-   uint8_t dev_addr;
-} ads1115_t;
+//ESP_EVENT_DEFINE_BASE(INPUT_EVENTS);
 
-static ads1115_t ads_cfg;
+void IRAM_ATTR Ads1115::isr_handler(void* arg) {
 
-static esp_err_t ADS1115_read_to_rwbuff(uint8_t reg_adr);          // Move these to the header file if you need additional r/w capabilities
-static esp_err_t ADS1115_write_reg(uint16_t val, uint16_t reg);    // Move these to the header file if you need additional r/w capabilities
-static esp_err_t i2c_handle_write(uint8_t dev_adr, uint8_t w_adr, uint8_t w_len, uint8_t *buff) ;
-static esp_err_t i2c_handle_read(uint8_t dev_adr, uint8_t r_adr, uint8_t r_len, uint8_t *buff);
+    int32_t pin = 0;
+    // = static_cast<int32_t>((static_cast<intrArgs *>(arg))->readyPin);
+    //mux_t inputs = (static_cast<intrArgs *>(arg))->inputs;
 
+    esp_event_isr_post(INPUT_EVENTS, pin, /*(void*) inputs*/nullptr, /*sizeof(inputs)*/0, nullptr);
+}
 
-//inline implementations
-extern inline esp_err_t ADS1115_request_single_ended_AIN0();
-extern inline esp_err_t ADS1115_request_single_ended_AIN1();
-extern inline esp_err_t ADS1115_request_single_ended_AIN2();
-extern inline esp_err_t ADS1115_request_single_ended_AIN3();
-
-extern inline esp_err_t ADS1115_request_diff_AIN0_AIN1();
-extern inline esp_err_t ADS1115_request_diff_AIN0_AIN3();
-extern inline esp_err_t ADS1115_request_diff_AIN1_AIN3();
-extern inline esp_err_t ADS1115_request_diff_AIN2_AIN3();
-
-static inline esp_err_t ADS1115_set_lo_thresh(uint16_t value);
-static inline esp_err_t ADS1115_set_hi_thresh(uint16_t value);
-*/
 Ads1115::Ads1115(I2c* i2c_master, Ads1115::addr_t dev_address)
 {
     esp_log_level_set(ADS_TAG, ADS1115_DEBUG_LEVEL);
@@ -53,6 +35,9 @@ Ads1115::Ads1115(I2c* i2c_master, Ads1115::addr_t dev_address)
     _config.bit.COMP_POL = 0;
     _config.bit.COMP_LAT = 0;
     _config.bit.COMP_QUE = 0b11;
+
+    _useReadyPin = false;
+    _readyGpio = GPIO_NUM_NC;
 
     _cfg_changed = true;
 }
@@ -113,28 +98,29 @@ Ads1115::reg2Bytes_t Ads1115::readRegister(Ads1115::reg_addr_t reg)
 
 uint16_t Ads1115::getRaw(Ads1115::mux_t inputs) {
     const static uint16_t sps[] = {8,16,32,64,128,250,475,860};
-        /*
-    if(ads->rdy_pin.in_use) {
-        gpio_isr_handler_add(ads->rdy_pin.pin, gpio_isr_handler, (void*)ads->rdy_pin.gpio_evt_queue);
-        xQueueReset(ads->rdy_pin.gpio_evt_queue);
-    }
-    */
     esp_err_t err;
+    
+    _inputs = inputs;
+
+    if(_useReadyPin) {
+        //err = esp_event_handler_instance_register(INPUT_EVENTS, _intrArgs.readyPin, _intrArgs.callback, /*(void*)&_intrArgs.inputs**/0, nullptr);
+        //gpio_isr_handler_add(_intrArgs.readyPin, isr_handler, (void*)&_intrArgs);
+    }
+    
+    
     _config.bit.MUX = inputs;
-    err = writeRegister(reg_configuration , _config.reg);
+    err = writeRegister(reg_configuration , _config.reg); // This trigger the conversion
 
     if(err) {
         ESP_LOGE(ADS_TAG,"could not write to device: %s",esp_err_to_name(err));
-        /*
-        if(ads->rdy_pin.in_use) {
-            gpio_isr_handler_remove(ads->rdy_pin.pin);
-            xQueueReset(ads->rdy_pin.gpio_evt_queue);
+        if(_useReadyPin) {
+            //gpio_isr_handler_remove(_intrArgs.readyPin);
+            
         }
-        */
         return 0;
     }
 
-    if(false/*ads->rdy_pin.in_use*/) {
+    if(_useReadyPin) {
         /*
         xQueueReceive(ads->rdy_pin.gpio_evt_queue, &tmp, portMAX_DELAY);
         gpio_isr_handler_remove(ads->rdy_pin.pin);
@@ -146,11 +132,11 @@ uint16_t Ads1115::getRaw(Ads1115::mux_t inputs) {
         bool test = isBusy();
         if(test)
             ESP_LOGE(ADS_TAG,"Device is busy");
+        reg2Bytes_t res = readRegister(reg_conversion);
+        return res.reg;
     }
 
-    reg2Bytes_t res = readRegister(reg_conversion);
-    return res.reg;
-
+    return 0;
 }
 
 double Ads1115::getVoltage(Ads1115::mux_t inputs) {
@@ -220,38 +206,75 @@ bool Ads1115::isBusy(){
     return true;
 }
 
+void Ads1115::setReadyPin(const gpio_num_t gpio, esp_event_handler_t callback) {
+    //gpio_config_t io_conf;
+    esp_err_t err;
+
+    if (_useReadyPin)
+        return;         // exit if already configured
+
+    //_readyGpio.enablePullup();
+    _readyGpio.init(gpio);
+    //_readyGpio.disablePulldown();
+    _readyGpio.enablePullup();
+    _readyGpio.enableInterrupt(GPIO_INTR_NEGEDGE);
+
+    esp_event_loop_create_default();    // Create System Event Loop
+    _readyGpio.setEventHandler(callback,&_inputs,sizeof(_inputs));
+
+    
+    _useReadyPin = true;
+    _config.bit.COMP_QUE = 0b00; // assert after one conversion
+    _cfg_changed = true;
+
+
+    Ads1115::reg2Bytes_t value;
+    value.reg = 0x0000;
+    err = writeRegister(Ads1115::reg_lo_thresh, value); // set lo threshold to minimum
+    if(err) ESP_LOGE(ADS_TAG,"setReadyPin - could not set low threshold: %s",esp_err_to_name(err));
+    
+    value.reg = 0xFFFF;
+    err = writeRegister(Ads1115::reg_hi_thresh, value); // set hi threshold to maximum
+    if(err) ESP_LOGE(ADS_TAG,"setReadyPin - could not set high threshold: %s",esp_err_to_name(err));
+}
+
+void Ads1115::removeReadyPin() {
+    /*
+    
+    gpio_config_t io_conf;
+    esp_err_t err;
+
+    if (_useReadyPin)
+        return;         // exit if already configured
+
+    io_conf.intr_type = GPIO_INTR_NEGEDGE; // positive to negative (pulled down)
+    io_conf.pin_bit_mask =  1ULL << gpio;
+    io_conf.mode = GPIO_MODE_INPUT;
+    gpio_config(&io_conf); // set gpio configuration
+
+    gpio_set_pull_mode(gpio, GPIO_PULLUP_ONLY);
+
+    //ads->rdy_pin.gpio_evt_queue = xQueueCreate(1, sizeof(bool));
+    gpio_install_isr_service(0);
+
+    _useReadyPin = true;
+    _readyPin = gpio;
+    _config.bit.COMP_QUE = 0b00; // assert after one conversion
+    _cfg_changed = true;
+    
+    Ads1115::reg2Bytes_t value;
+    value.reg = 0x0000;
+    err = writeRegister(Ads1115::reg_lo_thresh, value); // set lo threshold to minimum
+    if(err) ESP_LOGE(ADS_TAG,"setReadyPin - could not set low threshold: %s",esp_err_to_name(err));
+    
+    value.reg = 0xFFFF;
+    err = writeRegister(Ads1115::reg_hi_thresh, value); // set hi threshold to maximum
+    if(err) ESP_LOGE(ADS_TAG,"setReadyPin - could not set high threshold: %s",esp_err_to_name(err));
+*/
+
+}
+
 /*
-
-
-bool ADS1115_get_conversion_state()
-{
-    ADS1115_read_to_rwbuff(ADS1115_REG_CFG);
-    return (ads_cfg.rw_buff[0] & 0x80) ? true : false;
-} 
-
-esp_err_t ADS1115_request_by_definition(uint8_t def)
-{
-    ads_cfg.reg_cfg &= ADS1115_CFG_MS_MUX_OMASK;
-    ads_cfg.reg_cfg |= (def << 8) & 0xFF00;
-    ads_cfg.reg_cfg |= ADS1115_CFG_MS_OS_ACTIVE & 0xFF00;
-
-    return ADS1115_write_reg(ads_cfg.reg_cfg, ADS1115_REG_CFG);
-}
-
-int16_t ADS1115_get_conversion()
-{
-    ADS1115_read_to_rwbuff(ADS1115_REG_CONV);
-    return (int16_t)BYTES_INT(ads_cfg.rw_buff[0], ads_cfg.rw_buff[1]);
-
-}
-
-esp_err_t ADS1115_set_thresh_by_definition(uint8_t thresh, uint16_t val)
-{
-    if(thresh != ADS1115_REG_LO_THRESH || thresh != ADS1115_REG_HI_THRESH)
-        return ESP_ERR_INVALID_ARG;
-        
-    return ADS1115_write_reg(val, thresh);
-}
 
 esp_err_t ADS1115_set_ready_pin()
 {
