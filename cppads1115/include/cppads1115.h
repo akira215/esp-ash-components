@@ -1,7 +1,6 @@
 #pragma once
 
 #include "cppi2c.h"
-//#include "driver/gpio.h"
 #include "esp_event.h"
 #include "cppgpio.h"
 
@@ -10,78 +9,8 @@
 /* ESP32 Specifics ------------------------------- */
 #define ADS1115_DEBUG_LEVEL ESP_LOG_DEBUG
 
-/* Device Address -------------------------------- */
-//#define ADS1115_DEF_DEV_ADR 0b1001000 >> 1 // 0x48 
-/*
-#define ADS111X_ADDR_GND      0x48 //!< I2C device address with ADDR pin connected to ground
-#define ADS111X_ADDR_VCC      0x49 //!< I2C device address with ADDR pin connected to VCC
-#define ADS111X_ADDR_SDA      0x4a //!< I2C device address with ADDR pin connected to SDA
-#define ADS111X_ADDR_SCL      0x4b //!< I2C device address with ADDR pin connected to SCL
-*/
-/* Address Pointer Register ---------------------- */
-/*
-#define ADS1115_REG_CONV                  0x00
-#define ADS1115_REG_CFG                   0x01
-#define ADS1115_REG_LO_THRESH             0x02
-#define ADS1115_REG_HI_THRESH             0x03
-*/
-/* Conversion Register --------------------------- */
-#define ADS1115_CONV_RESULT_MASK          0xFFF0
-#define ADS1115_CONV_RESULT               0x0000
 
-/* Config Register ------------------------------- */
-/*
-// Most Significant Byte //
-#define ADS1115_CFG_MS_OS_ACTIVE          0x8000  // when reading, 1 is busy, 0 is ready. When writing, starts a covnersion from powerdown state
-#define ADS1115_CFG_MS_MUX_OMASK          0x8F00  // mask out
-
-// inline functions pass these defintions, so are shifted instead of an uint16 argument
-#define ADS1115_CFG_MS_MUX_DIFF_AIN0_AIN1 0x00    // default
-#define ADS1115_CFG_MS_MUX_DIFF_AIN0_AIN3 0x10 
-#define ADS1115_CFG_MS_MUX_DIFF_AIN1_AIN3 0x20  
-#define ADS1115_CFG_MS_MUX_DIFF_AIN2_AIN3 0x30  
-#define ADS1115_CFG_MS_MUX_SNGL_AIN0_GND  0x40  
-#define ADS1115_CFG_MS_MUX_SNGL_AIN1_GND  0x50  
-#define ADS1115_CFG_MS_MUX_SNGL_AIN2_GND  0x60  
-#define ADS1115_CFG_MS_MUX_SNGL_AIN3_GND  0x70 
-
-#define ADS1115_CFG_MS_PGA_FSR_6_144V     0x0000   // only expresses full-scale range of ADC scaling. Do not apply more than VDD + 0.3 V to the analog inputs
-#define ADS1115_CFG_MS_PGA_FSR_4_096V     0x0200   // only expresses full-scale range of ADC scaling. Do not apply more than VDD + 0.3 V to the analog inputs
-#define ADS1115_CFG_MS_PGA_FSR_2_048V     0x0600   // default
-#define ADS1115_CFG_MS_PGA_FSR_1_024V     0x0800  
-#define ADS1115_CFG_MS_PGA_FSR_0_512V     0x0C00 
-#define ADS1115_CFG_MS_PGA_FSR_0_256V     0x0E00  
-#define ADS1115_CFG_MS_MODE_CON           0x0000   // Continuous Mode
-#define ADS1115_CFG_MS_MODE_SS            0x0100   // Single shot Mode
-
-// Least Significant Byte //
-#define ADS1115_CFG_LS_DR_128SPS          0x00
-#define ADS1115_CFG_LS_DR_250SPS          0x20
-#define ADS1115_CFG_LS_DR_490SPS          0x40
-#define ADS1115_CFG_LS_DR_920SPS          0x60
-#define ADS1115_CFG_LS_DR_1600SPS         0x80   // default
-#define ADS1115_CFG_LS_DR_2400SPS         0xA0
-#define ADS1115_CFG_LS_DR_3300SPS         0xC0
-
-#define ADS1115_CFG_LS_COMP_MODE_TRAD     0x00   // default
-#define ADS1115_CFG_LS_COMP_MODE_WIN      0x10
-#define ADS1115_CFG_LS_COMP_POL_LOW       0x00   // default
-#define ADS1115_CFG_LS_COMP_POL_HIGH      0x08
-#define ADS1115_CFG_LS_COMP_LAT_NON       0x00   // default
-#define ADS1115_CFG_LS_COMP_LAT_LATCH     0x04
-#define ADS1115_CFG_LS_COMP_QUE_ONE       0x00   // assert after x conversion..
-#define ADS1115_CFG_LS_COMP_QUE_TWO       0x01
-#define ADS1115_CFG_LS_COMP_QUE_FOUR      0x02
-#define ADS1115_CFG_LS_COMP_QUE_DIS       0x03   // default; disable comparator and set ALERT/RDY pin to high-impedance
-*/
-/* Lo_tresh / Hi_thresh Register ---------------- */
-#define ADS1115_THRESH_VALUE_MASK         0xFFF0
-#define ADS1115_RDY_HI_THRESH_VALUE       0x8000 // Set the most-significant bit of the Hi_thresh register to 1
-#define ADS1115_RDY_LO_THRESH_VALUE       0x0000 // the most-significant bit of Lo_thresh register to 0 to enable the pin as a conversion ready pin
-
-#define BYTES_INT(A,B) (((A << 8) & 0xFF00) | B)
-
-//ESP_EVENT_DECLARE_BASE(INPUT_EVENTS);
+//#define BYTES_INT(A,B) (((A << 8) & 0xFF00) | B)
 
 class Ads1115
 {
@@ -162,8 +91,17 @@ class Ads1115
             reg2Bytes_t reg;
         } Cfg_reg;
 
+        typedef void (*ads_handler_t) (uint16_t, int16_t) ; 
 
-        Ads1115(I2c* i2c_master, addr_t dev_address);
+        typedef struct {
+            mux_t                       mux {MUX_0_1};
+            i2c_master_dev_handle_t     dev_handle {nullptr};
+            I2c*                        i2c_master {nullptr};
+            ads_handler_t               callback {nullptr};
+        } intrArgs;
+
+
+        Ads1115(I2c* i2c_master, addr_t dev_address, uint32_t clk_speed = 400000);
         ~Ads1115();
 
         const Cfg_reg& getConfig();
@@ -182,12 +120,18 @@ class Ads1115
         double      getVoltage(mux_t inputs);
 
         bool isBusy();
-        void setReadyPin(const gpio_num_t gpio, esp_event_handler_t callback);
+
+        ///
+        /// @brief configure the device to trigger an output on a pin when conversion is ready
+        /// @param gpio gpio on which the ALERT/RDY pin of the ads device is connect to the ESP
+        /// @param callback a function that will be called with the result of the conversion.
+        /// The call back shall have signature void(uint16_t input, int16_t value)
+        void setReadyPin(const gpio_num_t gpio, ads_handler_t callback);
+
         void removeReadyPin();
 
-        static void IRAM_ATTR isr_handler(void* arg);
-
-        esp_event_loop_handle_t _loop_handle {}; // check to move private
+    private:
+        static void event_handler(void *handler_args, esp_event_base_t base, int32_t id, void *event_data);    
 
     private:
         i2c_master_dev_handle_t _dev_handle;
@@ -195,33 +139,7 @@ class Ads1115
         Cfg_reg                 _config;
         bool                    _cfg_changed;
         bool                    _useReadyPin;
-        mux_t                   _inputs;
         GpioInput               _readyGpio;
+        intrArgs*               _intArgs;
 };
 
-
-/*
-esp_err_t ADS1115_initiate(uint8_t dev_addr, uint16_t reg_cfg);
-esp_err_t ADS1115_set_config(uint8_t dev_addr, uint16_t reg_cfg);
-
-int16_t ADS1115_get_conversion();
-bool ADS1115_get_conversion_state();
-
-esp_err_t ADS1115_request_by_definition(uint8_t def);
-esp_err_t ADS1115_set_thresh_by_definition(uint8_t thresh, uint16_t val);
-
-esp_err_t ADS1115_set_ready_pin(); // Configure the ALERT/RDY pin as Ready
-
-static inline esp_err_t ADS1115_set_lo_thresh(uint16_t value) { return ADS1115_set_thresh_by_definition(ADS1115_REG_LO_THRESH, value); };
-static inline esp_err_t ADS1115_set_hi_thresh(uint16_t value) { return ADS1115_set_thresh_by_definition(ADS1115_REG_HI_THRESH, value); };
-
-static inline esp_err_t ADS1115_request_single_ended_AIN0() { return ADS1115_request_by_definition(ADS1115_CFG_MS_MUX_SNGL_AIN0_GND); };
-static inline esp_err_t ADS1115_request_single_ended_AIN1() { return ADS1115_request_by_definition(ADS1115_CFG_MS_MUX_SNGL_AIN1_GND); };
-static inline esp_err_t ADS1115_request_single_ended_AIN2() { return ADS1115_request_by_definition(ADS1115_CFG_MS_MUX_SNGL_AIN2_GND); };
-static inline esp_err_t ADS1115_request_single_ended_AIN3() { return ADS1115_request_by_definition(ADS1115_CFG_MS_MUX_SNGL_AIN3_GND); };
-
-static inline esp_err_t ADS1115_request_diff_AIN0_AIN1() { return ADS1115_request_by_definition(ADS1115_CFG_MS_MUX_DIFF_AIN0_AIN1); };
-static inline esp_err_t ADS1115_request_diff_AIN0_AIN3() { return ADS1115_request_by_definition(ADS1115_CFG_MS_MUX_DIFF_AIN0_AIN3); };
-static inline esp_err_t ADS1115_request_diff_AIN1_AIN3() { return ADS1115_request_by_definition(ADS1115_CFG_MS_MUX_DIFF_AIN1_AIN3); };
-static inline esp_err_t ADS1115_request_diff_AIN2_AIN3() { return ADS1115_request_by_definition(ADS1115_CFG_MS_MUX_DIFF_AIN2_AIN3); };
-*/

@@ -23,6 +23,7 @@ class GpioInput : public GpioBase
     public:
         GpioInput(const gpio_num_t pin, const bool activeLow = false);
         GpioInput(void);
+        ~GpioInput();
 
         esp_err_t init(const gpio_num_t pin, const bool activeLow = false);
         int read(void);
@@ -35,7 +36,7 @@ class GpioInput : public GpioBase
         esp_err_t disablePullupPulldown(void);
 
         esp_err_t enableInterrupt(gpio_int_type_t int_type);
-        esp_err_t setEventHandler(esp_event_handler_t Gpio_e_h,void* data = nullptr,size_t data_size = 0);
+        esp_err_t setEventHandler(esp_event_handler_t Gpio_e_h, void* data = nullptr);
         esp_err_t setEventHandler(esp_event_loop_handle_t Gpio_e_l, esp_event_handler_t Gpio_e_h);
         void setQueueHandle(QueueHandle_t Gpio_e_q);
 
@@ -48,15 +49,15 @@ class GpioInput : public GpioBase
 
         struct interrupt_args
         {
-            bool                    _event_handler_set = false;
-            bool                    _custom_event_handler_set = false;
-            bool                    _queue_enabled = false;
-            gpio_num_t              _pin;
-            esp_event_loop_handle_t _custom_event_loop_handle {nullptr};
-            QueueHandle_t           _queue_handle {nullptr};
-            void*                   data;
-            size_t                  data_size;
+            bool                    event_handler_set = false;
+            bool                    custom_event_handler_set = false;
+            bool                    queue_enabled = false;
+            gpio_num_t              pin {GPIO_NUM_NC};
+            esp_event_loop_handle_t custom_event_loop_handle {nullptr};
+            QueueHandle_t           queue_handle {nullptr};
+            void*                   event_data {nullptr};
         } _interrupt_args;
+
 
     }; // GpioInput Class
 

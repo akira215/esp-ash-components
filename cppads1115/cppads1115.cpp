@@ -7,24 +7,28 @@
 
 #include "cppads1115.h"
 
+#include <iostream> // todel
+
 static const char *ADS_TAG = "ADS1115";
 
-//ESP_EVENT_DEFINE_BASE(INPUT_EVENTS);
+void Ads1115::event_handler(void *handler_args, esp_event_base_t base, int32_t id, void *event_data)
+{
+    // target pointer address has been copied by the post function
+    intrArgs** args = static_cast<intrArgs**>(event_data); 
 
-void IRAM_ATTR Ads1115::isr_handler(void* arg) {
+    uint16_t nMux = static_cast<uint16_t>((*args)->mux);
+    i2c_master_dev_handle_t dev_handle = (*args)->dev_handle;
+    I2c* i2c_master = (*args)->i2c_master;
 
-    int32_t pin = 0;
-    // = static_cast<int32_t>((static_cast<intrArgs *>(arg))->readyPin);
-    //mux_t inputs = (static_cast<intrArgs *>(arg))->inputs;
-
-    esp_event_isr_post(INPUT_EVENTS, pin, /*(void*) inputs*/nullptr, /*sizeof(inputs)*/0, nullptr);
+    // Call the client callback with the values
+    (*args)->callback(nMux,i2c_master->WriteReadWord(dev_handle, reg_conversion));
 }
 
-Ads1115::Ads1115(I2c* i2c_master, Ads1115::addr_t dev_address)
+Ads1115::Ads1115(I2c* i2c_master, Ads1115::addr_t dev_address,uint32_t clk_speed)
 {
     esp_log_level_set(ADS_TAG, ADS1115_DEBUG_LEVEL);
     _i2c_master = i2c_master;
-    _dev_handle = _i2c_master->addDevice(dev_address,400000);
+    _dev_handle = _i2c_master->addDevice(dev_address, clk_speed);
 
     _config.bit.OS = 1; // always start conversion
     _config.bit.MUX = MUX_0_1;
@@ -40,11 +44,13 @@ Ads1115::Ads1115(I2c* i2c_master, Ads1115::addr_t dev_address)
     _readyGpio = GPIO_NUM_NC;
 
     _cfg_changed = true;
+    _intArgs = new intrArgs;
 }
 
 Ads1115::~Ads1115()
 {
     _i2c_master->removeDevice(_dev_handle);
+    delete _intArgs;
 }
 
 const Ads1115::Cfg_reg& Ads1115::getConfig()
@@ -96,18 +102,62 @@ Ads1115::reg2Bytes_t Ads1115::readRegister(Ads1115::reg_addr_t reg)
     return data;
 }
 
+void Ads1115::setReadyPin(const gpio_num_t gpio, ads_handler_t callback) {
+    
+    esp_err_t err;
+
+    if (_useReadyPin)
+        return;         // exit if already configured
+
+
+    _readyGpio.init(gpio);
+    //_readyGpio.disablePulldown();
+    _readyGpio.enablePullup();
+    _readyGpio.enableInterrupt(GPIO_INTR_NEGEDGE);
+   
+    _intArgs->callback = callback;
+    _intArgs->dev_handle = _dev_handle;
+    _intArgs->i2c_master = _i2c_master;
+
+    esp_event_loop_create_default();    // Create System Event Loop
+    
+    _readyGpio.setEventHandler(&event_handler , &_intArgs); // should send address of pointer, as it will be copied
+    
+    _useReadyPin = true;
+    _config.bit.COMP_QUE = 0b00; // assert after one conversion
+    _cfg_changed = true;
+
+    std::cout << "&_intArgs : " << &_intArgs << '\n';
+    std::cout << "i2c_master_dev_handle_t : " << _intArgs->dev_handle  << '\n';
+    std::cout << "i2c_master : " << _intArgs->i2c_master << '\n';
+    std::cout << "sizeof(_intArgs) : " << sizeof(_intArgs) << '\n';
+    std::cout << "sizeof(struct + + +) : " << sizeof(mux_t) + sizeof(i2c_master_dev_handle_t) + sizeof(I2c*) + sizeof(ads_handler_t)<< '\n';
+    std::cout << "_intArgs : " << _intArgs << '\n';
+    std::cout << "-------------------------------"  << '\n';
+
+    Ads1115::reg2Bytes_t value;
+    value.reg = 0x0000;
+    err = writeRegister(Ads1115::reg_lo_thresh, value); // set lo threshold to minimum
+    if(err) ESP_LOGE(ADS_TAG,"setReadyPin - could not set low threshold: %s",esp_err_to_name(err));
+    
+    value.reg = 0xFFFF;
+    err = writeRegister(Ads1115::reg_hi_thresh, value); // set hi threshold to maximum
+    if(err) ESP_LOGE(ADS_TAG,"setReadyPin - could not set high threshold: %s",esp_err_to_name(err));
+}
+
 uint16_t Ads1115::getRaw(Ads1115::mux_t inputs) {
     const static uint16_t sps[] = {8,16,32,64,128,250,475,860};
     esp_err_t err;
     
-    _inputs = inputs;
+    
 
     if(_useReadyPin) {
         //err = esp_event_handler_instance_register(INPUT_EVENTS, _intrArgs.readyPin, _intrArgs.callback, /*(void*)&_intrArgs.inputs**/0, nullptr);
         //gpio_isr_handler_add(_intrArgs.readyPin, isr_handler, (void*)&_intrArgs);
     }
     
-    
+    _intArgs->mux = inputs;
+
     _config.bit.MUX = inputs;
     err = writeRegister(reg_configuration , _config.reg); // This trigger the conversion
 
@@ -206,37 +256,7 @@ bool Ads1115::isBusy(){
     return true;
 }
 
-void Ads1115::setReadyPin(const gpio_num_t gpio, esp_event_handler_t callback) {
-    //gpio_config_t io_conf;
-    esp_err_t err;
 
-    if (_useReadyPin)
-        return;         // exit if already configured
-
-    //_readyGpio.enablePullup();
-    _readyGpio.init(gpio);
-    //_readyGpio.disablePulldown();
-    _readyGpio.enablePullup();
-    _readyGpio.enableInterrupt(GPIO_INTR_NEGEDGE);
-
-    esp_event_loop_create_default();    // Create System Event Loop
-    _readyGpio.setEventHandler(callback,&_inputs,sizeof(_inputs));
-
-    
-    _useReadyPin = true;
-    _config.bit.COMP_QUE = 0b00; // assert after one conversion
-    _cfg_changed = true;
-
-
-    Ads1115::reg2Bytes_t value;
-    value.reg = 0x0000;
-    err = writeRegister(Ads1115::reg_lo_thresh, value); // set lo threshold to minimum
-    if(err) ESP_LOGE(ADS_TAG,"setReadyPin - could not set low threshold: %s",esp_err_to_name(err));
-    
-    value.reg = 0xFFFF;
-    err = writeRegister(Ads1115::reg_hi_thresh, value); // set hi threshold to maximum
-    if(err) ESP_LOGE(ADS_TAG,"setReadyPin - could not set high threshold: %s",esp_err_to_name(err));
-}
 
 void Ads1115::removeReadyPin() {
     /*
