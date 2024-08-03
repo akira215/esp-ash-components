@@ -73,7 +73,7 @@ private:
 
 #include <iostream>
 
-static const char *TAG = "tank_app";
+static const char *TAG = "Main_app";
 
 #define I2C_MASTER_SCL_IO           CONFIG_I2C_MASTER_SCL      //!< GPIO number used for I2C master clock 
 #define I2C_MASTER_SDA_IO           CONFIG_I2C_MASTER_SDA      //!< GPIO number used for I2C master data  
