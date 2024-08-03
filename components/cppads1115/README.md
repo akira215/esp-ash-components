@@ -39,8 +39,6 @@ could be reported to try to improve it.
 #include "cppi2c.h"
 #include "cppads1115.h"
 
-#define GPIO_LED                    CONFIG_LED_GPIO  //!< GPIO number connect to the LED
-
 // Main class used for testing only
 class Main final
 {
@@ -48,8 +46,6 @@ public:
     Main();
     void run(void);
     void setup(void);
-
-    esp_event_loop_handle_t gpio_loop_handle {};
 
     // Event handler when conversion is received
     static void ads1115_event_handler(uint16_t input, int16_t value);
