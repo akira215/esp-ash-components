@@ -1,4 +1,9 @@
-
+/*
+  cppgpio
+  Repository: https://github.com/akira215/esp-ash-components
+  License: GNU GENERAL PUBLIC LICENSE Version 3, 29 June 2007
+  Author: Akira Shimahara
+*/
 #include "cppgpio.h"
 
 esp_err_t GpioOutput::_init(const gpio_num_t pin, const bool activeLow)

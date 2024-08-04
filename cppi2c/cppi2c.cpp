@@ -1,3 +1,10 @@
+/*
+  cppi2c
+  Repository: https://github.com/akira215/esp-ash-components
+  License: GNU GENERAL PUBLIC LICENSE Version 3, 29 June 2007
+  Author: Akira Shimahara
+*/
+
 #include "cppi2c.h"
 #include <stdexcept>
 #include <algorithm>

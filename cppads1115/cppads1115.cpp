@@ -1,5 +1,12 @@
+/*
+  cppads1115
+  Repository: https://github.com/akira215/esp-ash-components
+  License: GNU GENERAL PUBLIC LICENSE Version 3, 29 June 2007
+  Author: Akira Shimahara
+*/
+
 #include <stdio.h>
-//#include <driver/i2c.h>
+
 #include <esp_log.h>
 #include <string.h>
 #include "freertos/FreeRTOS.h"
@@ -109,7 +116,6 @@ void Ads1115::setReadyPin(const gpio_num_t gpio, ads_handler_t callback) {
     if (_useReadyPin)
         return;         // exit if already configured
 
-
     _readyGpio.init(gpio);
     //_readyGpio.disablePulldown();
     _readyGpio.enablePullup();
@@ -149,8 +155,6 @@ uint16_t Ads1115::getRaw(Ads1115::mux_t inputs) {
     const static uint16_t sps[] = {8,16,32,64,128,250,475,860};
     esp_err_t err;
     
-    
-
     if(_useReadyPin) {
         //err = esp_event_handler_instance_register(INPUT_EVENTS, _intrArgs.readyPin, _intrArgs.callback, /*(void*)&_intrArgs.inputs**/0, nullptr);
         //gpio_isr_handler_add(_intrArgs.readyPin, isr_handler, (void*)&_intrArgs);
@@ -170,18 +174,16 @@ uint16_t Ads1115::getRaw(Ads1115::mux_t inputs) {
         return 0;
     }
 
-    if(_useReadyPin) {
-        /*
-        xQueueReceive(ads->rdy_pin.gpio_evt_queue, &tmp, portMAX_DELAY);
-        gpio_isr_handler_remove(ads->rdy_pin.pin);
-        */
-    }
-    else {
+
+    if(!_useReadyPin) {
         // wait for 1 ms longer than the sampling rate, plus a little bit for rounding
         vTaskDelay((((1000/sps[_config.bit.DR]) + 1) / portTICK_PERIOD_MS)+1);
-        bool test = isBusy();
-        if(test)
-            ESP_LOGE(ADS_TAG,"Device is busy");
+        
+        while(isBusy()){
+            ESP_LOGE(ADS_TAG,"Device is busy - retrying in 1ms");
+            vTaskDelay(pdMS_TO_TICKS(1));
+        }
+
         reg2Bytes_t res = readRegister(reg_conversion);
         return res.reg;
     }

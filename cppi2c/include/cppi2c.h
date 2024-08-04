@@ -1,6 +1,11 @@
+/*
+  cppi2c
+  Repository: https://github.com/akira215/esp-ash-components
+  License: GNU GENERAL PUBLIC LICENSE Version 3, 29 June 2007
+  Author: Akira Shimahara
+*/
 #pragma once
 
-//#include "driver/i2c.h"
 #include "driver/i2c_master.h"
 #include "esp_intr_alloc.h"
 #include <vector>

@@ -1,3 +1,10 @@
+/*
+  cppads1115
+  Repository: https://github.com/akira215/esp-ash-components
+  License: GNU GENERAL PUBLIC LICENSE Version 3, 29 June 2007
+  Author: Akira Shimahara
+*/
+
 #pragma once
 
 #include "cppi2c.h"
@@ -10,63 +17,69 @@
 #define ADS1115_DEBUG_LEVEL ESP_LOG_DEBUG
 
 
-//#define BYTES_INT(A,B) (((A << 8) & 0xFF00) | B)
-
 class Ads1115
 {
     public:
+
+        /// @brief Hardware Address configuration of ADS1115 device
         typedef enum : uint16_t
         {
-            Addr_Gnd = 0x48,
-            Addr_Vcc = 0x49,
-            Addr_Sda = 0x4a,
-            Addr_Scl = 0x4b
+            Addr_Gnd = 0x48,    ///< ADDR pin to GND
+            Addr_Vcc = 0x49,    ///< ADDR pin to VCC
+            Addr_Sda = 0x4a,    ///< ADDR pin to SDA
+            Addr_Scl = 0x4b     ///< ADDR pin to SCL
         } addr_t;
 
+        /// @brief Registers Adress of ADS1115 device
         typedef enum : uint8_t
         {
-            reg_conversion      = 0x00,
-            reg_configuration   = 0x01,
-            reg_lo_thresh       = 0x02,
-            reg_hi_thresh       = 0x03
+            reg_conversion      = 0x00, ///< Conversion register
+            reg_configuration   = 0x01, ///< Configuration register
+            reg_lo_thresh       = 0x02, ///< Low Threshold register
+            reg_hi_thresh       = 0x03  ///< High Threshold register
         } reg_addr_t;
 
+        /// @brief Multiplexer configuration. This bit determine the input that will be converted
         typedef enum { // multiplex options
-            MUX_0_1 = 0, // default
-            MUX_0_3,
-            MUX_1_3,
-            MUX_2_3,
-            MUX_0_GND,
-            MUX_1_GND,
-            MUX_2_GND,
-            MUX_3_GND,
+            MUX_0_1 = 0,    ///< + AIN0 | - AIN1 | Default
+            MUX_0_3,        ///< + AIN0 | - AIN3 
+            MUX_1_3,        ///< + AIN1 | - AIN3 
+            MUX_2_3,        ///< + AIN2 | - AIN3 
+            MUX_0_GND,      ///< + AIN0 | - GND
+            MUX_1_GND,      ///< + AIN1 | - GND
+            MUX_2_GND,      ///< + AIN2 | - GND
+            MUX_3_GND,      ///< + AIN3 | - GND
         } mux_t;
 
+        /// @brief Programmable Gain Amplifier configuration
         typedef enum { // full-scale resolution options
-            FSR_6_144 = 0,          // resolution = 0.1875mV/bit
-            FSR_4_096,              // resolution = 0.125mV/bit  
-            FSR_2_048, // default   // resolution = 0.0625mV/bit
-            FSR_1_024,              // resolution = 0.03125mV/bit
-            FSR_0_512,              // resolution = 0.015625mV/bit
-            FSR_0_256,              // resolution = 0.0078125mV/bit
+            FSR_6_144 = 0,          ///< resolution = 0.1875mV/bit
+            FSR_4_096,              ///< resolution = 0.125mV/bit  
+            FSR_2_048,              ///< resolution = 0.0625mV/bit | Default
+            FSR_1_024,              ///< resolution = 0.03125mV/bit
+            FSR_0_512,              ///< resolution = 0.015625mV/bit
+            FSR_0_256,              ///< resolution = 0.0078125mV/bit
         } fsr_t;
 
+        /// @brief Operating Mode
         typedef enum {
             MODE_CONTINUOUS = 0,
             MODE_SINGLE // default
         } mode_t;
 
+        /// @brief Data rate, expressed in Samples per Second
         typedef enum { // samples per second
             SPS_8 = 0,
             SPS_16,
             SPS_32,
             SPS_64,
-            SPS_128, // default
+            SPS_128, ///< Default
             SPS_250,
             SPS_475,
             SPS_860
         } sps_t;
 
+        /// @brief 2 bytes register value
         typedef union { 
             struct {
                 uint8_t LSB;
@@ -75,53 +88,67 @@ class Ads1115
             uint16_t reg;
         } reg2Bytes_t;
 
+        /// @brief Configuration register value
         typedef union { // configuration register
             struct {
-                uint16_t COMP_QUE:2;  // bits 0..  1  Comparator queue and disable
-                uint16_t COMP_LAT:1;  // bit  2       Latching Comparator
-                uint16_t COMP_POL:1;  // bit  3       Comparator Polarity
-                uint16_t COMP_MODE:1; // bit  4       Comparator Mode
-                uint16_t DR:3;        // bits 5..  7  Data rate
-                uint16_t MODE:1;      // bit  8       Device operating mode
-                uint16_t PGA:3;       // bits 9..  11 Programmable gain amplifier configuration
-                uint16_t MUX:3;       // bits 12.. 14 Input multiplexer configuration
-                uint16_t OS:1;        // bit  15      Operational status or single-shot conversion start
+                uint16_t COMP_QUE:2;  ///< bits 0..  1  Comparator queue and disable
+                uint16_t COMP_LAT:1;  ///< bit  2       Latching Comparator
+                uint16_t COMP_POL:1;  ///< bit  3       Comparator Polarity
+                uint16_t COMP_MODE:1; ///< bit  4       Comparator Mode
+                uint16_t DR:3;        ///< bits 5..  7  Data rate
+                uint16_t MODE:1;      ///< bit  8       Device operating mode
+                uint16_t PGA:3;       ///< bits 9..  11 Programmable gain amplifier configuration
+                uint16_t MUX:3;       ///< bits 12.. 14 Input multiplexer configuration
+                uint16_t OS:1;        ///< bit  15      Operational status or single-shot conversion start
             } bit;
-            //uint16_t reg;
             reg2Bytes_t reg;
         } Cfg_reg;
 
+        /// @brief handler type for interrupt on READY pin
         typedef void (*ads_handler_t) (uint16_t, int16_t) ; 
 
-        typedef struct {
-            mux_t                       mux {MUX_0_1};
-            i2c_master_dev_handle_t     dev_handle {nullptr};
-            I2c*                        i2c_master {nullptr};
-            ads_handler_t               callback {nullptr};
-        } intrArgs;
-
-
+        /// @brief Constructor
+        /// @param i2c_master : a pointer to an initilized I2c instance
+        /// @param dev_address : ADS1115 Address set by hardware configuration
+        /// @param clk_speed : speed of i2c bus. default value is 400kHz
         Ads1115(I2c* i2c_master, addr_t dev_address, uint32_t clk_speed = 400000);
         ~Ads1115();
 
+        /// @brief return the current configuration. This will not read the device.
         const Cfg_reg& getConfig();
+
+        /// @brief set the current configuration. This will not write to the device 
+        /// until a new conversion is triggered
         void setConfig(const Cfg_reg& config);
 
+        /// @brief Write to the device 
+        /// @param reg : the device register to write in
+        /// @param data : a 2 bytes data as all the register of the device are 2B
         esp_err_t writeRegister(reg_addr_t reg, reg2Bytes_t data);
+
+        /// @brief Read to the device 
+        /// @param reg : the device register to be read
+        /// @return 2 bytes data as all the register of the device are 2B
         reg2Bytes_t readRegister(reg_addr_t reg);
 
         void setMux(mux_t mux);
+
         void setPga(fsr_t fsr);
+
         void setMode(mode_t mode);
+
         void setSps(sps_t sps);
 
         uint16_t    getRaw();
+
         uint16_t    getRaw(mux_t inputs);
+
         double      getVoltage(mux_t inputs);
 
+        /// @brief Test if the device is busy, reading the OS bit of the 
+        /// configuration register on the device
         bool isBusy();
 
-        ///
         /// @brief configure the device to trigger an output on a pin when conversion is ready
         /// @param gpio gpio on which the ALERT/RDY pin of the ads device is connect to the ESP
         /// @param callback a function that will be called with the result of the conversion.
@@ -131,6 +158,13 @@ class Ads1115
         void removeReadyPin();
 
     private:
+        typedef struct {
+            mux_t                       mux {MUX_0_1};
+            i2c_master_dev_handle_t     dev_handle {nullptr};
+            I2c*                        i2c_master {nullptr};
+            ads_handler_t               callback {nullptr};
+        } intrArgs;
+
         static void event_handler(void *handler_args, esp_event_base_t base, int32_t id, void *event_data);    
 
     private:
