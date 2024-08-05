@@ -25,7 +25,7 @@ class GpioInput : public GpioBase
     {
     private:
         esp_err_t _init(const gpio_num_t pin, const bool activeLow);
-        esp_err_t _clearEventHandlers();
+        
 
     public:
         GpioInput(const gpio_num_t pin, const bool activeLow = false);
@@ -43,10 +43,13 @@ class GpioInput : public GpioBase
         esp_err_t disablePullupPulldown(void);
 
         esp_err_t enableInterrupt(gpio_int_type_t int_type);
+        esp_err_t disableInterrupt();
+
         esp_err_t setEventHandler(esp_event_handler_t Gpio_e_h, void* data = nullptr);
         esp_err_t setEventHandler(esp_event_loop_handle_t Gpio_e_l, esp_event_handler_t Gpio_e_h);
         void setQueueHandle(QueueHandle_t Gpio_e_q);
-
+        esp_err_t clearEventHandlers();
+        
         static void IRAM_ATTR gpio_isr_callback(void* arg);
     
     private:

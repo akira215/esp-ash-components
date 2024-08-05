@@ -170,37 +170,22 @@ esp_err_t GpioInput::enableInterrupt(gpio_int_type_t int_type)
     return status;
 }
 
+esp_err_t GpioInput::disableInterrupt()
+{
+    // gpio_intr_disable is called by gpio_isr_handler_remove
+    return gpio_isr_handler_remove(_interrupt_args.pin);
+
+}
+
 
 // System event loop
 esp_err_t GpioInput::setEventHandler(esp_event_handler_t Gpio_e_h, void* data)
 {
     esp_err_t status{ESP_OK};
 
-    
-
-/*
-    void* p  = &_interrupt_args;
-    std::cout << "custom set: " << (static_cast<interrupt_args *>(p))->_custom_event_handler_set << '\n';
-
-    int32_t pin = static_cast<int32_t>((reinterpret_cast<interrupt_args *>(p))->_pin);
-    std::cout << "ISR pin: " << (pin) << '\n';
-    */
- //interrupt_args local = *(static_cast<interrupt_args *>(&_interrupt_args));
-
-    //bool custom_event_handler_set = (reinterpret_cast<interrupt_args *>(&_interrupt_args))->_custom_event_handler_set;
-    
-    //std::cout << "custom set: " << custom_event_handler_set << '\n';
-   
-    //gpio_num_t pin = (static_cast<interrupt_args *>(&_interrupt_args))->_pin;
-
-    //int32_t pin = (reinterpret_cast<struct interrupt_args *>(&_interrupt_args))->_pin;
-    //std::cout << "ISR pin: " << static_cast<int32_t>(pin) << '\n';
-
-    std::cout << "setEventHandler: void* data " << data << '\n';
-
     taskENTER_CRITICAL(&_eventChangeMutex);
 
-    status = _clearEventHandlers();
+    status = clearEventHandlers();
 
     status = esp_event_handler_instance_register(INPUT_EVENTS, _interrupt_args.pin, Gpio_e_h, 0, nullptr);
 
@@ -212,7 +197,6 @@ esp_err_t GpioInput::setEventHandler(esp_event_handler_t Gpio_e_h, void* data)
     
     taskEXIT_CRITICAL(&_eventChangeMutex);
 
-    std::cout << "setEventHandler:  _interrupt_args.event_data " <<  _interrupt_args.event_data << '\n';
     return status;
 }
 
@@ -222,7 +206,7 @@ esp_err_t GpioInput::setEventHandler(esp_event_loop_handle_t Gpio_e_l, esp_event
 
     taskENTER_CRITICAL(&_eventChangeMutex);
 
-    status = _clearEventHandlers();
+    status = clearEventHandlers();
 
     status |= esp_event_handler_instance_register_with(Gpio_e_l, INPUT_EVENTS, _interrupt_args.pin, Gpio_e_h, 0, nullptr);
 
@@ -241,13 +225,13 @@ esp_err_t GpioInput::setEventHandler(esp_event_loop_handle_t Gpio_e_l, esp_event
 void GpioInput::setQueueHandle(QueueHandle_t Gpio_e_q)
 {
     taskENTER_CRITICAL(&_eventChangeMutex);
-    _clearEventHandlers();
+    clearEventHandlers();
     _interrupt_args.queue_handle = Gpio_e_q;
     _interrupt_args.queue_enabled = true;
     taskEXIT_CRITICAL(&_eventChangeMutex);
 }
 
-esp_err_t GpioInput::_clearEventHandlers()
+esp_err_t GpioInput::clearEventHandlers()
 {
     esp_err_t status {ESP_OK};
 

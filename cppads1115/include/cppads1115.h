@@ -105,7 +105,7 @@ class Ads1115
         } Cfg_reg;
 
         /// @brief handler type for interrupt on READY pin
-        typedef void (*ads_handler_t) (uint16_t, int16_t) ; 
+        typedef void (*ads_handler_t) (uint16_t, double) ; 
 
         /// @brief Constructor
         /// @param i2c_master : a pointer to an initilized I2c instance
@@ -121,28 +121,40 @@ class Ads1115
         /// until a new conversion is triggered
         void setConfig(const Cfg_reg& config);
 
-        /// @brief Write to the device 
+        /// @brief Write to the device register
         /// @param reg : the device register to write in
         /// @param data : a 2 bytes data as all the register of the device are 2B
         esp_err_t writeRegister(reg_addr_t reg, reg2Bytes_t data);
 
-        /// @brief Read to the device 
+        /// @brief Read to the device register
         /// @param reg : the device register to be read
         /// @return 2 bytes data as all the register of the device are 2B
         reg2Bytes_t readRegister(reg_addr_t reg);
 
+        /// @brief Set the multiplexer for the next conversion
+        /// @param mux : multiplexer to be set
         void setMux(mux_t mux);
 
+        /// @brief Set the resolution for the next conversion
+        /// @param fsr : resolution to be set
         void setPga(fsr_t fsr);
 
+        /// @brief Set the mode taht will be triggered with the next conversion
+        /// @param mode : mode to be set (i.e. one shot or continuous)
         void setMode(mode_t mode);
 
+        /// @brief Set the Sample rate for the next conversion
+        /// @param sps : Rate (sample per second)
         void setSps(sps_t sps);
 
-        uint16_t    getRaw();
-
+        /// @brief This method trigger a conversion with current config
+        /// @param inputs : the multiplexer setting for this conversion
+        /// @return the conversion register if Ready pin is not set, otherwise 0
         uint16_t    getRaw(mux_t inputs);
 
+        /// @brief This method trigger a conversion with current config
+        /// @param inputs : the multiplexer setting for this conversion
+        /// @return the voltage in Volt, if Ready pin is not set, otherwise 0
         double      getVoltage(mux_t inputs);
 
         /// @brief Test if the device is busy, reading the OS bit of the 
@@ -152,18 +164,23 @@ class Ads1115
         /// @brief configure the device to trigger an output on a pin when conversion is ready
         /// @param gpio gpio on which the ALERT/RDY pin of the ads device is connect to the ESP
         /// @param callback a function that will be called with the result of the conversion.
-        /// The call back shall have signature void(uint16_t input, int16_t value)
+        /// The call back shall have signature void(uint16_t input, double value)
         void setReadyPin(const gpio_num_t gpio, ads_handler_t callback);
-
+        
+        /// @brief remove the ready pin configuration on the device 
+        /// Interrupt will also be cleared on the pin, callback will never been called back again
         void removeReadyPin();
 
     private:
         typedef struct {
-            mux_t                       mux {MUX_0_1};
+            Cfg_reg*                    config;
+            bool                        voltage {false};
             i2c_master_dev_handle_t     dev_handle {nullptr};
             I2c*                        i2c_master {nullptr};
             ads_handler_t               callback {nullptr};
         } intrArgs;
+        
+        double getVoltageFromRaw(uint16_t value);
 
         static void event_handler(void *handler_args, esp_event_base_t base, int32_t id, void *event_data);    
 
