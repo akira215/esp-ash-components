@@ -135,8 +135,8 @@ void ZbNode::joinNetwork()
     //LEDTask::getInstance()->triggerSpecialEffect(LED_TASK_NETWORK_CONNECT_EFFECT);
 
      // Connect to a network status == ZB_TRUE 
-    zb_bool_t status = bdb_start_top_level_commissioning(ZB_BDB_SIGNAL_STEERING);
-    ESP_LOGI(ZB_TAG, "  BDB_eNsStartNwkSteering=%d", status);
+    //zb_bool_t status = bdb_start_top_level_commissioning(ZB_BDB_SIGNAL_STEERING);
+    //ESP_LOGI(ZB_TAG, "  BDB_eNsStartNwkSteering=%d", status);
 
 }
 

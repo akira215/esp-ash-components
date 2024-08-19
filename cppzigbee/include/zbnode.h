@@ -7,7 +7,7 @@
 
 #pragma once
 
-#include "zboss_api.h"
+//#include "zboss_api.h"
 #include "cppzb_ep.h"
 #include <esp_err.h>
 
