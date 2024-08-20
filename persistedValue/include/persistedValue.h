@@ -11,6 +11,7 @@
 #include "nvs.h"
 #include "nvs_flash.h"
 #include <string>
+#include <cstdlib>
 #include <esp_log.h>
 
 template<class T>
@@ -26,6 +27,8 @@ public:
         ESP_ERROR_CHECK(nvs_flash_init());
         ESP_ERROR_CHECK(nvs_open(namesp.c_str(), NVS_READWRITE, &_handle));
         esp_err_t err = readValue(&_value);
+        if (err!=ESP_OK)
+            ESP_LOGW("PersistedValue","Error during reading NVS - Error:%d ", err);
     }
     ~PersistedValue(){
         save();
@@ -49,12 +52,13 @@ public:
     }
 
 private:
-    esp_err_t readValue(T* res);
-    esp_err_t writeValue();
-/*
-    template <>
-    esp_err_t PersistedValue<int8_t>::readValue(int8_t* res);
-*/
+    esp_err_t readValue(T* res){
+        size_t len  = sizeof(T);
+        return nvs_get_blob(_handle, _key.c_str(), (void*)(res), &len);
+    }
+    esp_err_t writeValue(){
+         return nvs_set_blob(_handle, _key.c_str(), (void*)(&_value), sizeof(T));
+    }
 
 }; // PersistedValue Class
 
