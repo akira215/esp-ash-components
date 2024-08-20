@@ -36,8 +36,14 @@ public:
     }
 
     void save (){
-        ESP_ERROR_CHECK(writeValue());
-        ESP_ERROR_CHECK(nvs_commit(_handle));
+        // Read value on NVS to avoid writing same value
+        T read;
+        readValue(&read);
+        if (_value != read){
+            ESP_ERROR_CHECK(writeValue());
+            ESP_ERROR_CHECK(nvs_commit(_handle));
+        } else
+            ESP_LOGI("PersistedValue","Same value on NVS, nothing to write");
     }
 
     T getValue() { return _value;}
