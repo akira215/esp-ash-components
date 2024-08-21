@@ -86,11 +86,11 @@ private:
 static const char *TAG = "Main_app";
 
 
-QueueHandle_t TankMonitor::button_evt_queue {nullptr};
+QueueHandle_t Main::button_evt_queue {nullptr};
 
 Main App;
 
-Main::TankMonitor(): 
+Main::Main(): 
 {
     
 }

@@ -7,11 +7,11 @@
 
 #pragma once
 
-//#include "zboss_api.h"
-#include "cppzb_ep.h"
-#include <esp_err.h>
 
 #include "esp_zigbee_core.h"
+#include "cppzb_ep.h"
+#include "persistedValue.h"
+#include <esp_err.h>
 
 #include <vector>
 
@@ -38,42 +38,49 @@
 
 class ZbNode
 {
-    typedef enum
-    {
-        NOT_JOINED,
-        JOINING,
-        JOINED
+    std::vector<ZbEndPoint*>    _vecEndPoint;
+    esp_zb_ep_list_t*           _ep_list;
 
-    } JoinStateEnum;
-
-    public:
+public:
 
         
-        //ZbNode();
-        ~ZbNode();
+    //ZbNode();
+    ~ZbNode();
+    static ZbNode* getInstance();
 
-        static ZbNode* getInstance();
+    void handleBdbEvent(esp_zb_app_signal_t *event);
 
-        void joinNetwork();
-        void rejoinNetwork();
-        void leaveNetwork();
-        void joinOrLeaveNetwork();
+    void joinNetwork();
+    void rejoinNetwork();
+    void leaveNetwork();
+    void joinOrLeaveNetwork();
 
-        void _init();
+    void _init();
 
-        
-        void start();
-    private:
-        /// @brief Constructor
-        ZbNode();
-        //void _init();
+    bool isJoined();
 
-        
+    void start();
 
-    private:
-        JoinStateEnum           _connectionState; // TODO Shall pe in NVS
-        std::vector<ZbEndPoint*>    _vecEndPoint;
-        esp_zb_ep_list_t*           _ep_list;
+protected:
+    void handleDeviceReboot(esp_err_t err);
+    void handleNetworkJoinAndRejoin();
+    void handleLeaveNetwork();
+    void handleRejoinFailure();
+    /*
+    void handlePollResponse(ZPS_tsAfPollConfEvent* pEvent);
+    void handleZdoBindUnbindEvent(ZPS_tsAfZdoBindEvent * pEvent, bool bind);
+    void handleZdoDataIndication(ZPS_tsAfEvent * pEvent);
+    void handleZdoEvents(ZPS_tsAfEvent* psStackEvent);
+    void handleZclEvents(ZPS_tsAfEvent* psStackEvent);
+    void handleAfEvent(BDB_tsZpsAfEvent *psZpsAfEvent);
+*/
+
+private:
+    /// @brief Constructor is private (singleton)
+    ZbNode();
+    //void _init();
+
+
 
 };
 

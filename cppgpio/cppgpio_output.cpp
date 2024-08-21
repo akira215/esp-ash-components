@@ -67,8 +67,8 @@ esp_err_t GpioOutput::toggle(void)
     return gpio_set_level(_pin, _level ? 1 : 0);
 }
 
-    esp_err_t GpioOutput::setLevel(int level)
-    {
-        _level = _active_low ? !level : level;
-        return gpio_set_level(_pin, _level);
-    }
+esp_err_t GpioOutput::setLevel(int level)
+{
+    _level = _active_low ? !level : level;
+    return gpio_set_level(_pin, _level);
+}

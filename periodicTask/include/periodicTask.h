@@ -13,7 +13,10 @@
 
 class PeriodicTask
 {
-    gptimer_handle_t _timer;
+    gptimer_handle_t    _timer;
+protected:
+    uint64_t            _period_ms;
+
 public:
     /// @brief Constructor of a periodic task
     /// @param delay in ms for task execution (default = 1s)

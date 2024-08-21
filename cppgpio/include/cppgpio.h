@@ -17,6 +17,9 @@ ESP_EVENT_DECLARE_BASE(INPUT_EVENTS);
 
 class GpioBase
     {
+    public:
+        virtual gpio_num_t getPin() = 0;
+        int32_t getPinNum() { return static_cast<int32_t>(getPin()); }
     protected:
         bool _active_low;
     }; // GpioBase Class
@@ -51,7 +54,7 @@ class GpioInput : public GpioBase
         esp_err_t clearEventHandlers();
         
         static void IRAM_ATTR gpio_isr_callback(void* arg);
-    
+        virtual gpio_num_t getPin() { return _interrupt_args.pin; }
     private:
         esp_event_handler_t _event_handle = nullptr;
         static portMUX_TYPE _eventChangeMutex;
@@ -87,6 +90,7 @@ class GpioOutput : public GpioBase
         esp_err_t off(void);
         esp_err_t toggle(void);
         esp_err_t setLevel(int level);
+        virtual gpio_num_t getPin() {   return _pin;    }
     private:
         gpio_num_t _pin;
     }; // GpioOutput Class

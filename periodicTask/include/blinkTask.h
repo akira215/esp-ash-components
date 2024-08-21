@@ -24,5 +24,5 @@ public:
 
     void setBlinkPeriod(uint64_t delay_ms);
 protected:
-    bool timerCallback();
+    virtual bool timerCallback();
 };

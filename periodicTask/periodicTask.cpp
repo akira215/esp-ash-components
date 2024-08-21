@@ -43,12 +43,14 @@ PeriodicTask::PeriodicTask(uint64_t delay_ms)
 
 PeriodicTask::~PeriodicTask()
 {
+    stop();
     gptimer_del_timer(_timer);
 }
 
 
 void PeriodicTask::setDelay(uint64_t delay_ms)
 {
+    _period_ms = delay_ms;
     // Configure the alarm
     gptimer_alarm_config_t alarm_cfg;
     alarm_cfg.alarm_count = 0;
