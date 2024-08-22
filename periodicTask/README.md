@@ -73,8 +73,16 @@ void Main::shortPressHandler(void *handler_args, esp_event_base_t base, int32_t 
 // Shall be static
 void Main::longPressHandler(void *handler_args, esp_event_base_t base, int32_t id, void *event_data)
 {
+    Main* instance = static_cast<Main*>(handler_args);
     ESP_LOGW(TAG,"Long Press detected %ld -",id);
+    if (instance->_ledBlinking){
+        delete instance->_ledBlinking;
+        instance->_ledBlinking = nullptr;
+    } else {
+        instance->_ledBlinking = new BlinkTask(GPIO_NUM_23, FAST_BLINK);
+    }
 }
+
 
 
 void Main::setup(void)
@@ -92,7 +100,7 @@ void Main::setup(void)
     _button.enablePullup();
     _buttonTask = new ButtonTask (_button);
     _buttonTask->setShortPressHandler(&shortPressHandler);
-    _buttonTask->setLongPressHandler(&longPressHandler);
+    _buttonTask->setLongPressHandler(&longPressHandler,(void*)this);
     
     ESP_LOGI(TAG,"Button task created");
 

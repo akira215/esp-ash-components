@@ -37,8 +37,8 @@ public:
     void setPollPeriod(uint64_t delay_ms);
     void setLongPress(uint64_t delay_ms);
 
-    esp_err_t setShortPressHandler(esp_event_handler_t Gpio_e_h);
-    esp_err_t setLongPressHandler(esp_event_handler_t Gpio_e_h);
+    esp_err_t setShortPressHandler(esp_event_handler_t handler, void *handler_arg = nullptr);
+    esp_err_t setLongPressHandler(esp_event_handler_t handler, void *handler_arg = nullptr);
     esp_err_t clearShortPressHandler();
     esp_err_t clearLongPressHandler();
     bool canSleep();

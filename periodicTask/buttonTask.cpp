@@ -100,7 +100,7 @@ bool ButtonTask::canSleep()
 }
 
 // System event loop
-esp_err_t ButtonTask::setShortPressHandler(esp_event_handler_t handler)
+esp_err_t ButtonTask::setShortPressHandler(esp_event_handler_t handler, void *handler_arg)
 {
     esp_err_t status{ESP_OK};
 
@@ -109,14 +109,14 @@ esp_err_t ButtonTask::setShortPressHandler(esp_event_handler_t handler)
 
     stop();
     esp_event_loop_create_default();    // Create System Event Loop
-    status = esp_event_handler_instance_register(SHORT_PRESS, _buttonPin.getPinNum(), handler, 0, nullptr);
+    status = esp_event_handler_instance_register(SHORT_PRESS, _buttonPin.getPinNum(), handler, handler_arg, nullptr);
     _shortPressHandlerSet = true;
     
     start();
     return status;
 }
 
-esp_err_t ButtonTask::setLongPressHandler(esp_event_handler_t handler)
+esp_err_t ButtonTask::setLongPressHandler(esp_event_handler_t handler, void *handler_arg)
 {
     esp_err_t status{ESP_OK};
 
@@ -125,7 +125,7 @@ esp_err_t ButtonTask::setLongPressHandler(esp_event_handler_t handler)
 
     stop();
     esp_event_loop_create_default();    // Create System Event Loop
-    status = esp_event_handler_instance_register(LONG_PRESS, _buttonPin.getPinNum(), handler, 0, nullptr);
+    status = esp_event_handler_instance_register(LONG_PRESS, _buttonPin.getPinNum(), handler, handler_arg, nullptr);
     _longPressHandlerSet = true;
     
     start();
