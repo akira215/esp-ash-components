@@ -15,31 +15,26 @@ static const uint64_t FAST_POLL     = 5;    // 5 ms
 static const uint64_t STANDARD_POLL = 10;   // 10 ms
 static const uint64_t SLOW_POLL     = 20;   // 20 ms
 
-
+static const uint8_t DEBOUNCE_MASK  = 0b11000111;   // we will check only the 1 bit of the mask, the 0 are don't care bit
 
 /// @brief button is polled periodically and send different signal (long press, ...)
 class ButtonTask : public PeriodicTask
 {
     GpioInput   _buttonPin;
     uint32_t    _idleCounter;
-    uint32_t    _counter;
-    uint32_t    _shortPress;
-    uint32_t    _longPress;
+    uint32_t    _longPress; // the number of tick to reach a long press (depend on polling period)
     bool        _shortPressHandlerSet;
     bool        _longPressHandlerSet;
 
 public:
     ButtonTask(const gpio_num_t pin, 
                 uint64_t delay_ms = STANDARD_POLL,
-                uint64_t shortPress = 60,
                 uint64_t longPress = 2000);
     ButtonTask(GpioInput& inputGpio, 
                 uint64_t delay_ms = STANDARD_POLL,
-                uint64_t shortPress = 60,
                 uint64_t longPress = 2000);
 
     void setPollPeriod(uint64_t delay_ms);
-    void setShortPress(uint64_t delay_ms);
     void setLongPress(uint64_t delay_ms);
 
     esp_err_t setShortPressHandler(esp_event_handler_t Gpio_e_h);

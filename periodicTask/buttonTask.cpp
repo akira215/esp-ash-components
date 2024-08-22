@@ -11,25 +11,21 @@ ESP_EVENT_DEFINE_BASE(SHORT_PRESS);
 ESP_EVENT_DEFINE_BASE(LONG_PRESS);
 
 ButtonTask::ButtonTask(const gpio_num_t pin, uint64_t delay_ms,
-                    uint64_t shortPress, uint64_t longPress) : 
+                        uint64_t longPress) : 
                 PeriodicTask(delay_ms)
 {
     _buttonPin.init(pin);
-    _counter = 0;
-    _idleCounter = 0;
-    setShortPress(shortPress);    
+    _idleCounter = 0;    
     setLongPress(longPress);
     _shortPressHandlerSet = false;
     start();
 }
 
 ButtonTask::ButtonTask(GpioInput& inputGpio, uint64_t delay_ms,
-                    uint64_t shortPress, uint64_t longPress) : 
+                        uint64_t longPress) : 
                 PeriodicTask(delay_ms), _buttonPin(inputGpio)
 {
-    _counter = 0;
-    _idleCounter = 0;
-    setShortPress(shortPress);    
+    _idleCounter = 0;  
     setLongPress(longPress);
     _shortPressHandlerSet = false;
     start();
@@ -38,13 +34,12 @@ ButtonTask::ButtonTask(GpioInput& inputGpio, uint64_t delay_ms,
 
 void ButtonTask::setPollPeriod(uint64_t delay_ms)
 {
+    // Need to recompute longpress tick
+    uint32_t longPress_ms = _longPress * _period_ms; 
     setDelay(delay_ms);
+    setLongPress(longPress_ms);
 }
 
-void ButtonTask::setShortPress(uint64_t delay_ms)
-{
-    _shortPress = (uint32_t)(delay_ms / _period_ms);
-}
 
 void ButtonTask::setLongPress(uint64_t delay_ms)
 {
@@ -55,28 +50,46 @@ void ButtonTask::setLongPress(uint64_t delay_ms)
 /// @return Whether a high priority task has been waken up by this function
 bool ButtonTask::timerCallback()
 {
-    bool btnPressed = _buttonPin.read();
+    // Debouncing strategy consist of checking the 8 bit button history,
+    // using a mask to hide transition (mask is 0b11000111, all the 0 are
+    // don't care bit). We compare to rising an falling pattern
+    // A long press is detected only once. Button shall be release prior
+    // to take in account any other press (short or long) detection
+    static uint8_t button_history = 0;
+    static uint32_t longPressCounter = 0;
+    static bool pressed = false;
+    uint8_t btnPressed = (uint8_t)_buttonPin.read();
+
+    button_history = button_history << 1;
+    button_history |= (uint8_t)_buttonPin.read();
+
+    if(btnPressed)
+        _idleCounter = 0;
     
-    if((btnPressed)&&(_counter >_longPress)){
-        _idleCounter = 0;
-        //Long press detected
-        if (_longPressHandlerSet)
-            esp_event_isr_post(LONG_PRESS, _buttonPin.getPinNum(), nullptr, 0, nullptr);
-        _counter = 0; // to avoid triggerring shortpress when releasing 
-    } else if (btnPressed){
-        _counter ++;
-        _idleCounter = 0;
-    } else if (_counter > _shortPress){
-        //Short press detected
-        
-        if (_shortPressHandlerSet)
+    if ((button_history & DEBOUNCE_MASK) == 0b00000111){ 
+        // button is pressed debounced
+        pressed = true;
+        button_history = 0b11111111;
+    } else if((button_history & DEBOUNCE_MASK) == 0b11000000){
+        // button is released debounced
+        if(pressed && _shortPressHandlerSet)
             esp_event_isr_post(SHORT_PRESS, _buttonPin.getPinNum(), nullptr, 0, nullptr);
 
-        _counter = 0;
-    } else {
+        pressed = false;
+        button_history = 0b00000000;
+    } else if (btnPressed && (longPressCounter >_longPress)) {
+        // long press detected 
+        if (_longPressHandlerSet)
+            esp_event_isr_post(LONG_PRESS, _buttonPin.getPinNum(), nullptr, 0, nullptr);
+        pressed = false;
+        longPressCounter = 0;
+    } else if (pressed && btnPressed) {
+        // button still pressed but we didn't reach the longpress until now
+        longPressCounter++;
+    } else{
+        longPressCounter = 0;
         _idleCounter++;
     }
-
 
     return false;
 }
@@ -102,7 +115,6 @@ esp_err_t ButtonTask::setShortPressHandler(esp_event_handler_t handler)
     start();
     return status;
 }
-
 
 esp_err_t ButtonTask::setLongPressHandler(esp_event_handler_t handler)
 {
