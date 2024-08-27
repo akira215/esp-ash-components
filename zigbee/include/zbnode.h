@@ -9,7 +9,7 @@
 
 #include "blinkTask.h"
 #include "esp_zigbee_core.h"
-#include "cppzb_ep.h"
+#include "zbEndpoint.h"
 
 
 #include <esp_err.h>
@@ -45,8 +45,8 @@
 
 class ZbNode
 {
-    std::vector<ZbEndPoint*>    _vecEndPoint;
-    esp_zb_ep_list_t*           _ep_list;
+    std::vector<ZbEndPoint*>     _vecEndPoint;
+    static esp_zb_ep_list_t*    _ep_list;
 
     static TaskHandle_t          _zbTask;
 
@@ -92,6 +92,10 @@ public:
     /// @return NULL if no task created otherwise the handle
     static TaskHandle_t getZbTask() { return _zbTask; }
 
+
+    /// @brief get the handle to the zbtask
+    void addEndPoint(ZbEndPoint* ep);
+
 protected:
     
     static void zbTask(void *pvParameters);
@@ -106,7 +110,8 @@ protected:
 private:
     /// @brief Constructor is private (singleton)
     ZbNode();
-    void _init();
+    void _initNetwork();
+    void _initEndPointList();
 
 
 

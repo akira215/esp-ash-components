@@ -13,6 +13,7 @@
 // TODO License
 // TODO Documentation
 // TODO Readme
+// TODO args of gpio callback shall be the pointer to the class deleting struct
 
 bool GpioInput::_interrupt_service_installed{false};
 portMUX_TYPE GpioInput::_eventChangeMutex = portMUX_INITIALIZER_UNLOCKED;

@@ -5,7 +5,7 @@
   Author: Akira Shimahara
 */
 
-#include "zbnode.h"
+#include "zbNode.h"
 
 #include <stdio.h>
 
@@ -26,6 +26,7 @@
 
 // Static init
 TaskHandle_t ZbNode::_zbTask = NULL;
+esp_zb_ep_list_t* ZbNode::_ep_list = nullptr;
 
 #ifdef ZB_USE_LED
 BlinkTask* ZbNode::_ledBlinking = nullptr;
@@ -60,7 +61,9 @@ ZbNode::ZbNode()
     ESP_ERROR_CHECK(nvs_flash_init());
     ESP_ERROR_CHECK(esp_zb_platform_config(&config));
 
-    _init();  // TODO move in constructor if require
+    _initNetwork();  // TODO move in constructor if require
+
+    _initEndPointList();
 
 }
 
@@ -70,10 +73,8 @@ ZbNode::~ZbNode()
 
 }
 
-void ZbNode::_init()
+void ZbNode::_initNetwork()
 {
-   
-   
     // This is in xTaskCreate
     /* Initialize Zigbee stack */
     esp_zb_cfg_t zb_nwk_cfg = {
@@ -89,8 +90,11 @@ void ZbNode::_init()
 
     esp_zb_init(&zb_nwk_cfg);
 
-    // create the end point list
-    //_ep_list = esp_zb_ep_list_create();
+}
+
+void ZbNode::_initEndPointList()
+{
+    _ep_list = esp_zb_ep_list_create();
 }
 
 bool ZbNode::isJoined()
@@ -269,16 +273,9 @@ void ZbNode::start()
 
 void ZbNode::zbTask(void *pvParameters)
 {
-    // Loop through end point to register
-    /*
-    for(ZbEndPoint* ep: _vecEndPoint)
-        ESP_ERROR_CHECK(esp_zb_ep_list_add_ep(_ep_list, 
-                                    ep->getClusterList(), 
-                                    ep->getConfig()));
-     
     //Register the device 
     esp_zb_device_register(_ep_list);
-    */
+    
 
     // Config the reporting info  
     /*
@@ -303,4 +300,20 @@ void ZbNode::zbTask(void *pvParameters)
     ESP_ERROR_CHECK(esp_zb_start(false));
 
     esp_zb_main_loop_iteration();
+}
+
+
+/*---------------------------------------------------------------------------------------------*/
+
+void ZbNode::addEndPoint(ZbEndPoint* ep)
+{
+    //ESP_LOGI(ZB_TAG,"Pushing back");
+    //_vecEndPoint.push_back(ep);
+
+
+
+    ESP_LOGI(ZB_TAG,"Adding EndPoint");
+    esp_zb_ep_list_add_ep(_ep_list, 
+                        ep->getClusterList(), 
+                        ep->getConfig());
 }

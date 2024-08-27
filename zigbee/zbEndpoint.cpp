@@ -7,7 +7,9 @@
   Zigbee End Point Class
 */
 
-#include "cppzb_ep.h"
+#include "zbEndpoint.h"
+
+
 
 
 ZbEndPoint::ZbEndPoint(uint8_t id, uint16_t device_id,
@@ -24,6 +26,16 @@ ZbEndPoint::ZbEndPoint(uint8_t id, uint16_t device_id,
     basic_cfg.zcl_version  =    ESP_ZB_ZCL_BASIC_ZCL_VERSION_DEFAULT_VALUE;
     basic_cfg.power_source = ESP_ZB_ZCL_BASIC_POWER_SOURCE_DEFAULT_VALUE;                                                                       
     _basic_cluster = esp_zb_basic_cluster_create(&basic_cfg);
+
+    ESP_ERROR_CHECK(esp_zb_basic_cluster_add_attr(_basic_cluster, 
+                            ESP_ZB_ZCL_ATTR_BASIC_MANUFACTURER_NAME_ID, 
+                            (void*)MANUFACTURER_NAME));
+    ESP_ERROR_CHECK(esp_zb_basic_cluster_add_attr(_basic_cluster, 
+                            ESP_ZB_ZCL_ATTR_BASIC_MODEL_IDENTIFIER_ID, 
+                            (void*)MODEL_IDENTIFIER));
+
+    ESP_ERROR_CHECK(esp_zb_cluster_list_add_basic_cluster(_cluster_list, _basic_cluster, 
+                            ESP_ZB_ZCL_CLUSTER_SERVER_ROLE));
 
 }
 

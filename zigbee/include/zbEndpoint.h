@@ -9,8 +9,20 @@
 #include "esp_zigbee_core.h"
 #include "cppzb_cluster.h"
 
+/* Attribute values in ZCL string format
+ * The string should be started with the length of its own.
+ */
+#define MANUFACTURER_NAME               "\x05""AKIRA" //TODO del
+#define MODEL_IDENTIFIER                "\x08""ASH-Tank"  //TODO del
+
+
 class ZbEndPoint
 {
+        esp_zb_cluster_list_t*      _cluster_list;
+        esp_zb_attribute_list_t*    _basic_cluster;
+        std::vector<ZbCluster*>     _vecCluster;
+        esp_zb_endpoint_config_t    _endpoint_config;
+        uint8_t                     _id;
     public:
 
         /// @brief Constructor create the end point
@@ -34,13 +46,5 @@ class ZbEndPoint
     private:
         //void _init();
 
-        
-
-    private:
-        esp_zb_cluster_list_t*      _cluster_list;
-        esp_zb_attribute_list_t*    _basic_cluster;
-        std::vector<ZbCluster*>     _vecCluster;
-        esp_zb_endpoint_config_t    _endpoint_config;
-        uint8_t                     _id;
 
 };
