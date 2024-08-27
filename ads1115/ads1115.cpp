@@ -12,7 +12,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
-#include "cppads1115.h"
+#include "ads1115.h"
 
 #include <iostream> // todel
 

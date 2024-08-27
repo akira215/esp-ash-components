@@ -73,14 +73,16 @@ bool ButtonTask::timerCallback()
     } else if((button_history & DEBOUNCE_MASK) == 0b11000000){
         // button is released debounced
         if(pressed && _shortPressHandlerSet)
-            esp_event_isr_post(SHORT_PRESS, _buttonPin.getPinNum(), nullptr, 0, nullptr);
+            esp_event_isr_post_to(_loop_handle, SHORT_PRESS, 
+                        _buttonPin.getPinNum(), nullptr, 0, nullptr);
 
         pressed = false;
         button_history = 0b00000000;
     } else if (btnPressed && (longPressCounter >_longPress)) {
         // long press detected 
         if (_longPressHandlerSet)
-            esp_event_isr_post(LONG_PRESS, _buttonPin.getPinNum(), nullptr, 0, nullptr);
+            esp_event_isr_post_to(_loop_handle, LONG_PRESS, 
+                        _buttonPin.getPinNum(), nullptr, 0, nullptr);
         pressed = false;
         longPressCounter = 0;
     } else if (pressed && btnPressed) {
@@ -99,6 +101,8 @@ bool ButtonTask::canSleep()
     return _idleCounter > (uint32_t)(5000 / _period_ms);; // 5000 ms = 5 sec
 }
 
+
+
 // System event loop
 esp_err_t ButtonTask::setShortPressHandler(esp_event_handler_t handler, void *handler_arg)
 {
@@ -108,8 +112,12 @@ esp_err_t ButtonTask::setShortPressHandler(esp_event_handler_t handler, void *ha
         status = clearShortPressHandler();
 
     stop();
-    esp_event_loop_create_default();    // Create System Event Loop
-    status = esp_event_handler_instance_register(SHORT_PRESS, _buttonPin.getPinNum(), handler, handler_arg, nullptr);
+    //esp_event_loop_create_default();    // Create System Event Loop
+    createCustomEventLoop();
+    //status = esp_event_handler_instance_register(SHORT_PRESS, _buttonPin.getPinNum(), handler, handler_arg, nullptr);
+    status = esp_event_handler_instance_register_with(_loop_handle, SHORT_PRESS, 
+                            _buttonPin.getPinNum(), handler, handler_arg, nullptr);
+    
     _shortPressHandlerSet = true;
     
     start();
@@ -124,11 +132,15 @@ esp_err_t ButtonTask::setLongPressHandler(esp_event_handler_t handler, void *han
         status = clearLongPressHandler();
 
     stop();
-    esp_event_loop_create_default();    // Create System Event Loop
-    status = esp_event_handler_instance_register(LONG_PRESS, _buttonPin.getPinNum(), handler, handler_arg, nullptr);
+    createCustomEventLoop();
+    status = esp_event_handler_instance_register_with(_loop_handle, LONG_PRESS, 
+                            _buttonPin.getPinNum(), handler, handler_arg, nullptr);
+    //esp_event_loop_create_default();    // Create System Event Loop
+    //status = esp_event_handler_instance_register(LONG_PRESS, _buttonPin.getPinNum(), handler, handler_arg, nullptr);
     _longPressHandlerSet = true;
     
     start();
+    
     return status;
 }
 
@@ -137,8 +149,11 @@ esp_err_t ButtonTask::clearShortPressHandler()
     esp_err_t status {ESP_OK};
     stop();
     if (_shortPressHandlerSet){
-        esp_event_handler_instance_unregister(SHORT_PRESS, _buttonPin.getPinNum(), nullptr);
+        esp_event_handler_instance_unregister_with(_loop_handle, SHORT_PRESS, 
+                                                _buttonPin.getPinNum(), nullptr);
         _shortPressHandlerSet = false;
+        if(!_longPressHandlerSet)
+            clearCustomEventLoop();
     }
     start();
 
@@ -150,10 +165,42 @@ esp_err_t ButtonTask::clearLongPressHandler()
     esp_err_t status {ESP_OK};
     stop();
     if (_longPressHandlerSet){
-        esp_event_handler_instance_unregister(LONG_PRESS, _buttonPin.getPinNum(), nullptr);
+        esp_event_handler_instance_unregister_with(_loop_handle, LONG_PRESS, 
+                                                _buttonPin.getPinNum(), nullptr);
         _longPressHandlerSet = false;
+        if(!_shortPressHandlerSet)
+            clearCustomEventLoop();
     }
     start();
 
     return status;
+}
+
+void ButtonTask::createCustomEventLoop()
+{
+    if(_evtLoopCreated)
+        return;
+
+    // Custom event loop
+    esp_event_loop_args_t loop_args;
+    loop_args.queue_size = 5;
+    loop_args.task_name = "button_task"; // Task will be created
+    loop_args.task_priority = uxTaskPriorityGet(NULL);
+    loop_args.task_stack_size = 4096;
+    loop_args.task_core_id = tskNO_AFFINITY;
+    esp_event_loop_create(&loop_args, &_loop_handle); // Create Custom Event Loop
+
+    _evtLoopCreated = true;
+    
+}
+
+void ButtonTask::clearCustomEventLoop()
+{
+    if(!_evtLoopCreated)
+        return;
+
+    esp_event_loop_delete(_loop_handle);
+    
+    _evtLoopCreated = false;
+
 }

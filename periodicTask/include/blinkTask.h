@@ -17,10 +17,11 @@ static const uint64_t SLOW_BLINK        = 1000; // 1 sec
 
 class BlinkTask : public PeriodicTask
 {
-   GpioOutput ledPin;
+   GpioOutput _ledPin;
 
 public:
     BlinkTask(const gpio_num_t pin, uint64_t delay_ms = STANDARD_BLINK);
+    BlinkTask(GpioOutput& gpio, uint64_t delay_ms = STANDARD_BLINK);
 
     void setBlinkPeriod(uint64_t delay_ms);
 protected:

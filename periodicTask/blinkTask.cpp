@@ -7,9 +7,15 @@
 
 #include "blinkTask.h"
 
-BlinkTask::BlinkTask(const gpio_num_t pin, uint64_t delay_ms) : PeriodicTask(delay_ms)
+BlinkTask::BlinkTask(const gpio_num_t pin, uint64_t delay_ms) :PeriodicTask(delay_ms)
 {
-    ESP_ERROR_CHECK(ledPin.init(pin));
+    ESP_ERROR_CHECK(_ledPin.init(pin));
+    start();
+}
+
+BlinkTask::BlinkTask(GpioOutput& gpio, uint64_t delay_ms) : 
+            PeriodicTask(delay_ms), _ledPin(gpio)
+{
     start();
 }
 
@@ -20,7 +26,7 @@ void BlinkTask::setBlinkPeriod(uint64_t delay_ms)
 
 bool BlinkTask::timerCallback()
 {
-    ledPin.toggle();
+    _ledPin.toggle();
     return false;
 }
    

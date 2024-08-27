@@ -200,6 +200,7 @@ esp_err_t GpioInput::setEventHandler(esp_event_handler_t Gpio_e_h, void* data)
     return status;
 }
 
+// Custom event loop
 esp_err_t GpioInput::setEventHandler(esp_event_loop_handle_t Gpio_e_l, esp_event_handler_t Gpio_e_h)
 {
     esp_err_t status{ESP_OK};

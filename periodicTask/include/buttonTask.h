@@ -25,7 +25,8 @@ class ButtonTask : public PeriodicTask
     uint32_t    _longPress; // the number of tick to reach a long press (depend on polling period)
     bool        _shortPressHandlerSet;
     bool        _longPressHandlerSet;
-
+    esp_event_loop_handle_t _loop_handle{}; // Custom loop to avoid conflict with others
+    bool        _evtLoopCreated = false;
 public:
     ButtonTask(const gpio_num_t pin, 
                 uint64_t delay_ms = STANDARD_POLL,
@@ -45,4 +46,6 @@ public:
 
 protected:
     virtual bool timerCallback();
+    void createCustomEventLoop();
+    void clearCustomEventLoop();
 };
