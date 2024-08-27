@@ -24,10 +24,14 @@
 #error Define ZB_ED_ROLE in idf.py menuconfig to compile sensor (End Device) source code.
 #endif
 
+// Static init
+TaskHandle_t ZbNode::_zbTask = NULL;
+
 #ifdef ZB_USE_LED
 BlinkTask* ZbNode::_ledBlinking = nullptr;
 GpioOutput ZbNode::_led { (gpio_num_t)CONFIG_ZB_LED }; //TODO led pin number in config file
 #endif
+
 
 static const char *ZB_TAG = "ESP_ZB_CPP";
 
@@ -47,10 +51,8 @@ ZbNode* ZbNode::getInstance()
    return &instance;
 }
 
-
-
 ZbNode::ZbNode()
-{
+{ 
     esp_zb_platform_config_t config;
     config.radio_config = ESP_ZB_DEFAULT_RADIO_CONFIG();
     config.host_config = ESP_ZB_DEFAULT_HOST_CONFIG();
@@ -90,54 +92,6 @@ void ZbNode::_init()
     // create the end point list
     //_ep_list = esp_zb_ep_list_create();
 }
-
-/*
-void esp_zb_app_signal_handler(esp_zb_app_signal_t *signal_struct)
-{
-    uint32_t *p_sg_p     = signal_struct->p_app_signal;
-    esp_err_t err_status = signal_struct->esp_err_status;
-    esp_zb_app_signal_type_t sig_type = static_cast<esp_zb_app_signal_type_t>(*p_sg_p);
-    switch (sig_type) {
-        case ESP_ZB_ZDO_SIGNAL_SKIP_STARTUP:
-            ESP_LOGI(ZB_TAG, "Initialize Zigbee stack");
-            esp_zb_bdb_start_top_level_commissioning(ESP_ZB_BDB_MODE_INITIALIZATION);
-            break;
-        case ESP_ZB_BDB_SIGNAL_DEVICE_FIRST_START:
-        case ESP_ZB_BDB_SIGNAL_DEVICE_REBOOT:
-            if (err_status == ESP_OK) {
-                //ESP_LOGI(TAG, "Deferred driver initialization %s", deferred_driver_init() ? "failed" : "successful");
-                ESP_LOGI(ZB_TAG, "Device started up in %s factory-reset mode", esp_zb_bdb_is_factory_new() ? "" : "non");
-                if (esp_zb_bdb_is_factory_new()) {
-                    ESP_LOGI(ZB_TAG, "Start network steering");
-                    esp_zb_bdb_start_top_level_commissioning(ESP_ZB_BDB_MODE_NETWORK_STEERING);
-                } else {
-                    ESP_LOGI(ZB_TAG, "Device rebooted");
-                }
-            } else {
-                // commissioning failed 
-                ESP_LOGW(ZB_TAG, "Failed to initialize Zigbee stack (status: %s)", esp_err_to_name(err_status));
-            }
-            break;
-        case ESP_ZB_BDB_SIGNAL_STEERING:
-            if (err_status == ESP_OK) {
-                esp_zb_ieee_addr_t extended_pan_id;
-                esp_zb_get_extended_pan_id(extended_pan_id);
-                ESP_LOGI(ZB_TAG, "Joined network successfully (Extended PAN ID: %02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x, PAN ID: 0x%04hx, Channel:%d, Short Address: 0x%04hx)",
-                        extended_pan_id[7], extended_pan_id[6], extended_pan_id[5], extended_pan_id[4],
-                        extended_pan_id[3], extended_pan_id[2], extended_pan_id[1], extended_pan_id[0],
-                        esp_zb_get_pan_id(), esp_zb_get_current_channel(), esp_zb_get_short_address());
-            } else {
-                ESP_LOGI(ZB_TAG, "Network steering was not successful (status: %s)", esp_err_to_name(err_status));
-                //esp_zb_scheduler_alarm((esp_zb_callback_t)bdb_start_top_level_commissioning_cb, ESP_ZB_BDB_MODE_NETWORK_STEERING, 1000);
-            }
-            break;
-        default:
-            ESP_LOGI(ZB_TAG, "ZDO signal: %s (0x%x), status: %s", esp_zb_zdo_signal_to_string(sig_type), sig_type,
-                    esp_err_to_name(err_status));
-            break;
-    }
-}
-*/
 
 bool ZbNode::isJoined()
 {
@@ -309,7 +263,8 @@ void ZbNode::leaveNetwork()
 
 void ZbNode::start()
 {
-    xTaskCreate(zbTask, "Zigbee_Device", 4096, NULL, 5, NULL);
+    //xTaskCreate(zbTask, "Zigbee_Device", 4096, NULL, 5, NULL);
+    xTaskCreate(zbTask, "Zigbee_Device", 4096, NULL, 5, &_zbTask);
 }
 
 void ZbNode::zbTask(void *pvParameters)

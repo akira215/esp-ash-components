@@ -48,6 +48,8 @@ class ZbNode
     std::vector<ZbEndPoint*>    _vecEndPoint;
     esp_zb_ep_list_t*           _ep_list;
 
+    static TaskHandle_t          _zbTask;
+
     #ifdef ZB_USE_LED
     static BlinkTask*           _ledBlinking;
     static GpioOutput           _led;
@@ -63,11 +65,11 @@ public:
     //Singletons should not be assignable.
     void operator=(const ZbNode &) = delete;
 
+    /// @brief Instanciante the obj or return the point to the unique obj
     static ZbNode* getInstance();
 
     /// @brief Handle all the zb event. It is called by esp_zb_app_signal_handler
     void handleBdbEvent(esp_zb_app_signal_t *event);
-
    
     /// @brief Start Network steering
     /// @param param is not used, it is just to comply with esp_zb_callback_t
@@ -76,16 +78,19 @@ public:
     /// @brief will trigger the device to leave the network
     /// all related infos including the nvs will be deleted
     static void leaveNetwork();
-    
-    void rejoinNetwork();
-    
-    void joinOrLeaveNetwork();
 
-    void _init();
+    //void _init();
 
+    /// @brief Test if the device is currently connected to network
+    /// @return true if device is connected to a network
     static bool isJoined();
 
+    /// @brief Start the Zigbee stack
     void start();
+
+    /// @brief get the handle to the zbtask
+    /// @return NULL if no task created otherwise the handle
+    static TaskHandle_t getZbTask() { return _zbTask; }
 
 protected:
     
@@ -93,24 +98,15 @@ protected:
 
     void handleDeviceReboot(esp_err_t err);
     void handleNetworkSteering(esp_err_t err);
-    void handleNetworkJoinAndRejoin();
+    //void handleNetworkJoinAndRejoin();
     void handleLeaveNetwork(esp_err_t err);
     void handleNetworkStatus(esp_err_t err);
-    void handleRejoinFailure();
-
-    /*
-    void handlePollResponse(ZPS_tsAfPollConfEvent* pEvent);
-    void handleZdoBindUnbindEvent(ZPS_tsAfZdoBindEvent * pEvent, bool bind);
-    void handleZdoDataIndication(ZPS_tsAfEvent * pEvent);
-    void handleZdoEvents(ZPS_tsAfEvent* psStackEvent);
-    void handleZclEvents(ZPS_tsAfEvent* psStackEvent);
-    void handleAfEvent(BDB_tsZpsAfEvent *psZpsAfEvent);
-*/
+    //void handleRejoinFailure();
 
 private:
     /// @brief Constructor is private (singleton)
     ZbNode();
-    //void _init();
+    void _init();
 
 
 

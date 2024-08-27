@@ -20,7 +20,7 @@ git submodule add https://github.com/akira215/esp-ash-components.git components
 ```
 
 
-Kconfig shall refer Kconfig.zb:
+Project Kconfig shall refer Kconfig.zb:
 ```
 menu "Project Settings"
     
