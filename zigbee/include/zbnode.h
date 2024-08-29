@@ -45,7 +45,7 @@
 
 class ZbNode
 {
-    std::vector<ZbEndPoint*>     _vecEndPoint;
+    static std::vector<ZbEndPoint>     _vecEndPoint;
     static esp_zb_ep_list_t*    _ep_list;
 
     static TaskHandle_t          _zbTask;
@@ -94,7 +94,7 @@ public:
 
 
     /// @brief get the handle to the zbtask
-    void addEndPoint(ZbEndPoint* ep);
+    void addEndPoint(ZbEndPoint& ep);
 
 protected:
     

@@ -7,7 +7,8 @@
 
 #pragma once
 #include "esp_zigbee_core.h"
-#include "cppzb_cluster.h"
+#include "zbCluster.h"
+#include <vector>
 
 /* Attribute values in ZCL string format
  * The string should be started with the length of its own.
@@ -22,7 +23,8 @@ class ZbEndPoint
         esp_zb_attribute_list_t*    _basic_cluster;
         std::vector<ZbCluster*>     _vecCluster;
         esp_zb_endpoint_config_t    _endpoint_config;
-        uint8_t                     _id;
+        //uint8_t                     _id;
+        esp_zb_identify_cluster_cfg_t _identify_cfg; //TODEL
     public:
 
         /// @brief Constructor create the end point
@@ -35,6 +37,11 @@ class ZbEndPoint
                     uint16_t profile_id = ESP_ZB_AF_HA_PROFILE_ID,
                     uint32_t device_version = 0);
         ~ZbEndPoint();
+
+        /// @brief Copy constructor
+        /// perform a shallow copy
+        ZbEndPoint(const ZbEndPoint& other);
+
         void _init();
 
         esp_zb_cluster_list_t* getClusterList();
@@ -45,6 +52,9 @@ class ZbEndPoint
 
     private:
         //void _init();
+        void printClusters(); //TODO del debug only
+        void initZbCluster(); //TODO del debug only
+        //void printAttr(esp_zb_attribute_list_t* attrList); //TODO del debug only
 
 
 };
