@@ -11,6 +11,8 @@
 
 #include <iostream> // TODEL
 
+
+
 ZbCluster::ZbCluster(uint16_t id, bool isClient)
 {
     esp_zb_attribute_list_t attr_0; //attr 0 is null
@@ -41,7 +43,7 @@ ZbCluster::ZbCluster(uint16_t id, bool isClient)
 
     // Add global mandatory attribute ClusterRevision 0xfffd
     addAttribute(0xfffd, ESP_ZB_ZCL_ATTR_TYPE_U16, 
-                    ESP_ZB_ZCL_ATTR_ACCESS_READ_ONLY, (uint16_t)(4));
+                    ESP_ZB_ZCL_ATTR_ACCESS_READ_ONLY, ZbData<uint16_t>(4));
     
     
     std::cout << std::endl << "After addAttribute" << std::endl;
@@ -56,38 +58,19 @@ ZbCluster::ZbCluster(uint16_t id, bool isClient)
 
 ZbCluster::~ZbCluster()
 {
-    
+    //TODO delete all data and struct (teoritically useless because this will never been called)
 }
-
+/*
+template<typename T>
 void ZbCluster::addAttribute(uint16_t attr_id,
                         esp_zb_zcl_attr_type_t type, 
                         esp_zb_zcl_attr_access_t access,
-                        std::any value)
+                        const ZbData<T>& value)
 {
-    // Store the attribute value
-    _attrDatas.push_back(value);
-
-    esp_zb_attribute_list_t newAttribute;
-
-    newAttribute.cluster_id = _cluster.cluster_id;
-    newAttribute.next = 0;
-    newAttribute.attribute.id = attr_id;
-    newAttribute.attribute.type = type;
-    newAttribute.attribute.access = access; 
-    newAttribute.attribute.manuf_code = 0xffff; // TODO check
-    newAttribute.attribute.data_p = (&_attrDatas.back());
-
-    // Update next pointer
-    esp_zb_attribute_list_t** n = &_attrList.back().next;
-    _attrList.push_back(newAttribute);
-    (*n) = &_attrList.back();
-
-
-    // TODO check what is cluster attr_count;
-    // Increment Cluster attr count
-    // _cluster.attr_count += 1;
+    
 
 }
+*/
 
 esp_zb_zcl_cluster_t* ZbCluster::getClusterStruct()
 {

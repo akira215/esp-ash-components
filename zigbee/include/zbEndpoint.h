@@ -9,6 +9,7 @@
 #include "esp_zigbee_core.h"
 #include "zbCluster.h"
 #include <vector>
+#include <list>
 
 /* Attribute values in ZCL string format
  * The string should be started with the length of its own.
@@ -19,6 +20,7 @@
 
 class ZbEndPoint
 {
+        std::list<esp_zb_cluster_list_t> _clusterList;
         esp_zb_cluster_list_t*      _cluster_list;
         esp_zb_attribute_list_t*    _basic_cluster;
         std::vector<ZbCluster*>     _vecCluster;

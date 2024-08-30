@@ -14,7 +14,20 @@
 ZbEndPoint::ZbEndPoint(uint8_t id, uint16_t device_id,
                     uint16_t profile_id, uint32_t device_version)
 {
+    esp_zb_cluster_list_t cluster0;
+    cluster0.cluster.cluster_id = 0;
+    cluster0.cluster.attr_count = 0;
+    cluster0.cluster.attr_list = 0;
+    cluster0.cluster.role_mask = 0;
+    cluster0.cluster.manuf_code = 0;
+    cluster0.cluster.cluster_init = 0;
+    cluster0.next = 0;
+
+    _clusterList.push_back(cluster0);
+    
+
     _cluster_list = esp_zb_zcl_cluster_list_create();
+
 
     _endpoint_config.endpoint = id;
     _endpoint_config.app_device_id = device_id;
@@ -65,19 +78,22 @@ void ZbEndPoint::initZbCluster()
 {
     ZbCluster basicTest(0,false);
     basicTest.addAttribute(0,ESP_ZB_ZCL_ATTR_TYPE_U8,
-                        ESP_ZB_ZCL_ATTR_ACCESS_READ_ONLY,(uint8_t)(0x08));
+                        ESP_ZB_ZCL_ATTR_ACCESS_READ_ONLY, ZbData<uint8_t>(0x08));
     basicTest.addAttribute(7,ESP_ZB_ZCL_ATTR_TYPE_8BIT_ENUM,
-                        ESP_ZB_ZCL_ATTR_ACCESS_READ_ONLY,(uint8_t)(0x01));
-                        /*
+                        ESP_ZB_ZCL_ATTR_ACCESS_READ_ONLY, ZbData<uint8_t>(0x01));
+                        
     basicTest.addAttribute(4,ESP_ZB_ZCL_ATTR_TYPE_CHAR_STRING,
-                        ESP_ZB_ZCL_ATTR_ACCESS_READ_ONLY,8);
+                        ESP_ZB_ZCL_ATTR_ACCESS_READ_ONLY, ZbData<const char*>(MANUFACTURER_NAME));
     basicTest.addAttribute(5,ESP_ZB_ZCL_ATTR_TYPE_CHAR_STRING,
-                        ESP_ZB_ZCL_ATTR_ACCESS_READ_ONLY,8);
-                        */
+                        ESP_ZB_ZCL_ATTR_ACCESS_READ_ONLY, ZbData<const char*>(MODEL_IDENTIFIER));
+                        
     std::cout << std::endl << std::endl << std::endl; 
     std::cout << " ++++ Zb Implementation Clusters ++++" << std::endl;
 
-    ZbDebug::printCluster(basicTest.getClusterStruct());             
+    addCluster(&basicTest);
+
+
+    ZbDebug::printClusterList(&_clusterList.front());             
 
 }
 
@@ -109,6 +125,14 @@ ZbCluster* ZbEndPoint::createCluster()
 void ZbEndPoint::addCluster(ZbCluster* cluster)
 {
     _vecCluster.push_back(cluster);
+    esp_zb_cluster_list_t newClusterList;
+    newClusterList.cluster = *(cluster->getClusterStruct());
+    newClusterList.next = 0;
+
+    // Update next pointer
+    esp_zb_cluster_list_t** n = &_clusterList.back().next;
+    _clusterList.push_back(newClusterList);
+    (*n) = &_clusterList.back();
 
 }
 
