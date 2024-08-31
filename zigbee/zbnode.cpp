@@ -27,7 +27,8 @@
 // Static init
 TaskHandle_t ZbNode::_zbTask = NULL;
 esp_zb_ep_list_t* ZbNode::_ep_list = nullptr;
-std::vector<ZbEndPoint> ZbNode::_vecEndPoint = {};
+std::list<ZbEndPoint> ZbNode::_endPointList = {};
+std::list<ZbCluster>  ZbNode::_clusterList = {};
 
 #ifdef ZB_USE_LED
 BlinkTask* ZbNode::_ledBlinking = nullptr;
@@ -309,10 +310,20 @@ void ZbNode::zbTask(void *pvParameters)
 void ZbNode::addEndPoint(ZbEndPoint& ep)
 {   
     ESP_LOGI(ZB_TAG,"Pushing back");
-    _vecEndPoint.push_back(ep);
+    _endPointList.push_back(ep);
 
     ESP_LOGI(ZB_TAG,"Adding EndPoint");
     esp_zb_ep_list_add_ep(_ep_list, 
-                        _vecEndPoint.back().getClusterList(), 
-                        _vecEndPoint.back().getConfig());
+                        _endPointList.back().getClusterList(), 
+                        _endPointList.back().getConfig());
+}
+
+/*---------------------------------------------------------------------------------------------*/
+
+ZbCluster* ZbNode::createCluster(uint16_t id, bool isClient)
+{
+    //ZbCluster newCluster(id, isClient);
+    _clusterList.emplace_back(id, isClient);
+    
+    return &_clusterList.back();
 }

@@ -49,7 +49,6 @@ class ZbEndPoint
         esp_zb_cluster_list_t* getClusterList();
         esp_zb_endpoint_config_t getConfig();
 
-        ZbCluster* createCluster();
         void addCluster(ZbCluster* cluster);
 
     private:

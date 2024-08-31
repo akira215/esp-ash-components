@@ -10,11 +10,11 @@
 #include "blinkTask.h"
 #include "esp_zigbee_core.h"
 #include "zbEndpoint.h"
-
+#include "zbCluster.h"
 
 #include <esp_err.h>
 
-#include <vector>
+#include <list>
 
 #if !CONFIG_ZB_LED || CONFIG_ZB_LED==-1 
     #warning "No led has been defined, zigbee lib will not use led"
@@ -45,8 +45,9 @@
 
 class ZbNode
 {
-    static std::vector<ZbEndPoint>     _vecEndPoint;
-    static esp_zb_ep_list_t*    _ep_list;
+    static std::list<ZbEndPoint>    _endPointList;
+    static std::list<ZbCluster>     _clusterList;
+    static esp_zb_ep_list_t*        _ep_list;
 
     static TaskHandle_t          _zbTask;
 
@@ -95,6 +96,11 @@ public:
 
     /// @brief get the handle to the zbtask
     void addEndPoint(ZbEndPoint& ep);
+
+    
+    /// @brief create a new cluster
+    ZbCluster* createCluster(uint16_t id, bool isClient);
+
 
 protected:
     

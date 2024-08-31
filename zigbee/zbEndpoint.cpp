@@ -33,7 +33,7 @@ ZbEndPoint::ZbEndPoint(uint8_t id, uint16_t device_id,
     _endpoint_config.app_device_id = device_id;
     _endpoint_config.app_profile_id = profile_id;
     _endpoint_config.app_device_version = device_version;
-
+/*
     esp_zb_basic_cluster_cfg_s basic_cfg;
     basic_cfg.zcl_version  =    ESP_ZB_ZCL_BASIC_ZCL_VERSION_DEFAULT_VALUE;
     basic_cfg.power_source = ESP_ZB_ZCL_BASIC_POWER_SOURCE_DEFAULT_VALUE;                                                                       
@@ -61,8 +61,8 @@ ZbEndPoint::ZbEndPoint(uint8_t id, uint16_t device_id,
 
 
     printClusters();
-
-    initZbCluster();
+*/
+    //initZbCluster();
 }
 
 
@@ -76,26 +76,41 @@ ZbEndPoint::~ZbEndPoint()
 
 void ZbEndPoint::initZbCluster()
 {
-    ZbCluster basicTest(0,false);
-    basicTest.addAttribute(0,ESP_ZB_ZCL_ATTR_TYPE_U8,
+    /*
+    ZbCluster basicTest(0x0000,false);
+    basicTest.addAttribute(0x0000,ESP_ZB_ZCL_ATTR_TYPE_U8,
                         ESP_ZB_ZCL_ATTR_ACCESS_READ_ONLY, ZbData<uint8_t>(0x08));
-    basicTest.addAttribute(7,ESP_ZB_ZCL_ATTR_TYPE_8BIT_ENUM,
+    basicTest.addAttribute(0x0007,ESP_ZB_ZCL_ATTR_TYPE_8BIT_ENUM,
                         ESP_ZB_ZCL_ATTR_ACCESS_READ_ONLY, ZbData<uint8_t>(0x01));
                         
-    basicTest.addAttribute(4,ESP_ZB_ZCL_ATTR_TYPE_CHAR_STRING,
+    basicTest.addAttribute(0x0004,ESP_ZB_ZCL_ATTR_TYPE_CHAR_STRING,
                         ESP_ZB_ZCL_ATTR_ACCESS_READ_ONLY, ZbData<const char*>(MANUFACTURER_NAME));
-    basicTest.addAttribute(5,ESP_ZB_ZCL_ATTR_TYPE_CHAR_STRING,
+    basicTest.addAttribute(0x0005,ESP_ZB_ZCL_ATTR_TYPE_CHAR_STRING,
                         ESP_ZB_ZCL_ATTR_ACCESS_READ_ONLY, ZbData<const char*>(MODEL_IDENTIFIER));
-                        
+
+    ZbCluster identifyServer(0x0003,false);
+    identifyServer.addAttribute(0x0000,ESP_ZB_ZCL_ATTR_TYPE_U16,
+                        ESP_ZB_ZCL_ATTR_ACCESS_READ_WRITE, 
+                        ZbData<uint16_t>(ESP_ZB_ZCL_IDENTIFY_IDENTIFY_TIME_DEFAULT_VALUE));
+
+    ZbCluster identifyClient(0x0003,true);
+
+
+    addCluster(&basicTest);
+    addCluster(&identifyServer);
+    addCluster(&identifyClient);
+
+
     std::cout << std::endl << std::endl << std::endl; 
     std::cout << " ++++ Zb Implementation Clusters ++++" << std::endl;
 
-    addCluster(&basicTest);
 
 
     ZbDebug::printClusterList(&_clusterList.front());             
-
+*/
 }
+
+
 
 ZbEndPoint::ZbEndPoint(const ZbEndPoint& other)
 {
@@ -110,6 +125,7 @@ ZbEndPoint::ZbEndPoint(const ZbEndPoint& other)
 esp_zb_cluster_list_t* ZbEndPoint::getClusterList()
 {
     return _cluster_list;
+    return (&_clusterList.front());
 }
 
 esp_zb_endpoint_config_t ZbEndPoint::getConfig()
@@ -117,10 +133,7 @@ esp_zb_endpoint_config_t ZbEndPoint::getConfig()
     return _endpoint_config;
 }
 
-ZbCluster* ZbEndPoint::createCluster()
-{
-    return new ZbCluster(0,true);
-}
+
 
 void ZbEndPoint::addCluster(ZbCluster* cluster)
 {
@@ -139,7 +152,7 @@ void ZbEndPoint::addCluster(ZbCluster* cluster)
 //////////////////////////////////////////////// DEBUG//////////////////////////////
 void ZbEndPoint::printClusters()
 {
-    std::cout << "----- Clusters DEBUG HELPER----- " << std::endl;
+    std::cout << "---------- Clusters DEBUG HELPER ----------" << std::endl;
     ZbDebug::printClusterList(_cluster_list);
 }
 //////////////////////////////////////////////////////////////////////
