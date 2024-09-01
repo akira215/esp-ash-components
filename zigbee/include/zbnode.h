@@ -46,7 +46,7 @@
 class ZbNode
 {
     static std::list<ZbEndPoint*>   _endPointList;
-    static std::list<ZbCluster>     _clusterList;
+    //static std::list<ZbCluster>     _clusterList;
     static esp_zb_ep_list_t*        _ep_list;
 
     static TaskHandle_t             _zbTask;
@@ -97,11 +97,7 @@ public:
     /// @brief get the handle to the zbtask
     void addEndPoint(ZbEndPoint& ep);
 
-    
-    /// @brief create a new cluster
-    ZbCluster* createCluster(uint16_t id, bool isClient);
 
-    ZbCluster* getCluster(uint16_t id, bool isClient);
 
 
 protected:

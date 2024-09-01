@@ -20,10 +20,10 @@
 
 class ZbEndPoint
 {
-        std::list<esp_zb_cluster_list_t> _clusterList;
+        //std::list<esp_zb_cluster_list_t> _clusterList;
         esp_zb_cluster_list_t*      _cluster_list;
-        esp_zb_attribute_list_t*    _basic_cluster;
-        std::vector<ZbCluster*>     _vecCluster; // TODO chane in std list
+        esp_zb_attribute_list_t*    _basic_cluster; //TODEL Debug only
+        //std::vector<ZbCluster*>     _vecCluster; // TODO chane in std list
         esp_zb_endpoint_config_t    _endpoint_config;
         //uint8_t                     _id;
         esp_zb_identify_cluster_cfg_t _identify_cfg; //TODEL
@@ -40,11 +40,6 @@ class ZbEndPoint
                     uint32_t device_version = 0);
         ~ZbEndPoint();
 
-        /// @brief Copy constructor
-        /// perform a shallow copy
-        ZbEndPoint(const ZbEndPoint& other);
-
-        void _init();
 
         esp_zb_cluster_list_t* getClusterList();
         esp_zb_endpoint_config_t getConfig();
@@ -52,8 +47,7 @@ class ZbEndPoint
         void addCluster(ZbCluster* cluster);
 
     private:
-        //void _init();
-        void printClusters(); //TODO del debug only
+
         void initZbCluster(); //TODO del debug only
         //void printAttr(esp_zb_attribute_list_t* attrList); //TODO del debug only
 

@@ -28,7 +28,7 @@
 TaskHandle_t ZbNode::_zbTask = NULL;
 esp_zb_ep_list_t* ZbNode::_ep_list = nullptr;
 std::list<ZbEndPoint*> ZbNode::_endPointList = {};
-std::list<ZbCluster>  ZbNode::_clusterList = {};
+//std::list<ZbCluster>  ZbNode::_clusterList = {};
 
 #ifdef ZB_USE_LED
 BlinkTask* ZbNode::_ledBlinking = nullptr;
@@ -342,23 +342,3 @@ void ZbNode::addEndPoint(ZbEndPoint& ep)
 
 /*---------------------------------------------------------------------------------------------*/
 
-ZbCluster* ZbNode::createCluster(uint16_t id, bool isClient)
-{
-    /*
-    //ZbCluster newCluster(id, isClient);
-    _clusterList.emplace_back(id, isClient);
-    */
-    return &_clusterList.back();
-}
-
-ZbCluster* ZbNode::getCluster(uint16_t id, bool isClient)
-{
-    ZbCluster* cluster = nullptr;
-    
-    for (ZbCluster& c : _clusterList) {
-        if((c.getId() == id)&&(c.isClient() == isClient))
-            cluster = &c;
-    }
-
-    return cluster;
-}
