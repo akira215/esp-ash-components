@@ -97,7 +97,9 @@ public:
     /// @brief get the handle to the zbtask
     void addEndPoint(ZbEndPoint& ep);
 
-
+     /// @brief Handle zb actions
+    esp_err_t handleZbActions(esp_zb_core_action_callback_id_t callback_id, 
+                    const void *message);
 
 
 protected:
