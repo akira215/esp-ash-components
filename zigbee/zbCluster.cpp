@@ -13,80 +13,55 @@
 
 
 
-ZbCluster::ZbCluster(uint16_t id, bool isClient)
+ZbCluster::ZbCluster()
 {
-    esp_zb_attribute_list_t attr_0; //attr 0 is null
-    attr_0.cluster_id = 0;
-    attr_0.next = 0;
-    attr_0.attribute.id = 0;
-    attr_0.attribute.type = 0;
-    attr_0.attribute.access = 0;
-    attr_0.attribute.manuf_code = 0;
-    attr_0.attribute.data_p = 0;
+    
+}
 
-    _attrList.push_back(attr_0);
+ZbCluster::~ZbCluster()
+{
+    // Destructor seems useless as the doc says:
+    // After successful registration, the SDK will retain a copy of the whole data model, 
+    // the ep_list will be freed.
+    
+}
 
+void ZbCluster::_init(uint16_t id, bool isClient){
     _cluster.cluster_id = id;
     _cluster.attr_count = 0;
-    _cluster.attr_list = &_attrList.back();
+    //_cluster.attr_list = &_attrList.back();
+    _cluster.attr_list = _attr_list;
     isClient ? _cluster.role_mask = ESP_ZB_ZCL_CLUSTER_CLIENT_ROLE :
                 _cluster.role_mask = ESP_ZB_ZCL_CLUSTER_SERVER_ROLE;
     _cluster.manuf_code = 0; // TODO check
     _cluster.cluster_init = nullptr;//esp_zb_zcl_cluster_init_t cluster init callback
     
-    std::cout << "cluster attr list addr "<< _cluster.attr_list << std::endl;
-    std::cout << "vector addr            "<< &_attrList.back() << std::endl;
-    std::cout << "vector elmnt id  "<< _attrList.back().attribute.id << std::endl;
-    std::cout << "id 0 "<< _cluster.attr_list->attribute.id << std::endl;
-    std::cout << "next 0 "<< _cluster.attr_list->next << std::endl;
-
-
-    // Add global mandatory attribute ClusterRevision 0xfffd
-    addAttribute(0xfffd, ESP_ZB_ZCL_ATTR_TYPE_U16, 
-                    ESP_ZB_ZCL_ATTR_ACCESS_READ_ONLY, ZbData<uint16_t>(4));
-    
-    
-    std::cout << std::endl << "After addAttribute" << std::endl;
-    std::cout << "cluster attr list addr  "<< _cluster.attr_list << std::endl;
-    std::cout << "vector addr             "<< &_attrList.back() << std::endl;
-    std::cout << "vector first elmt  "<< &_attrList.front() << std::endl;
-    std::cout << "id 0 "<< _cluster.attr_list->attribute.id << std::endl;
-    std::cout << "next 0 "<< _cluster.attr_list->next << std::endl;
-    
-    std::cout<< "ZbCluster constructor"<< std::endl;
 }
 
-ZbCluster::~ZbCluster()
-{
-    //TODO delete all data and struct (teoritically useless because this will never been called)
-}
-/*
-template<typename T>
-void ZbCluster::addAttribute(uint16_t attr_id,
-                        esp_zb_zcl_attr_type_t type, 
-                        esp_zb_zcl_attr_access_t access,
-                        const ZbData<T>& value)
-{
-    
-
-}
-*/
 
 esp_zb_zcl_cluster_t* ZbCluster::getClusterStruct()
 {
-    std::cout << std::endl << "Before returning " << std::endl;
-    std::cout << "cluster attr list addr  "<< _cluster.attr_list << std::endl;
-    std::cout << "next first              "<< _cluster.attr_list->next << std::endl;
-    std::cout << "id 0 "<< _cluster.attr_list->attribute.id << std::endl;
-    std::cout << "id 1  "<< _cluster.attr_list->next->attribute.id  << std::endl;
-    
+    std::cout << "attr list addr" << (_cluster.attr_list) << std::endl;
     return &_cluster;
 }
 
-void ZbCluster::getAttribute(uint16_t attr_id)
+
+esp_zb_zcl_attr_t* ZbCluster::getAttribute(uint16_t attr_id)
 {
+    esp_zb_zcl_attr_t* attr = nullptr;
+    // TODO Implement
+    return attr;
+}
 
+uint16_t ZbCluster::getId() const
+{
+    return _cluster.cluster_id;  
+}
+
+bool ZbCluster::isClient() const
+{
+    if(_cluster.role_mask == ESP_ZB_ZCL_CLUSTER_CLIENT_ROLE)
+        return true;
     
-    std::cout<< "attribute" << std::endl;
-
+    return false;
 }

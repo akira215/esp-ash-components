@@ -9,11 +9,13 @@
 
 #include "zbEndpoint.h"
 #include "zbDebug.h"
+
 #include <iostream>
 
 ZbEndPoint::ZbEndPoint(uint8_t id, uint16_t device_id,
                     uint16_t profile_id, uint32_t device_version)
 {
+    /*
     esp_zb_cluster_list_t cluster0;
     cluster0.cluster.cluster_id = 0;
     cluster0.cluster.attr_count = 0;
@@ -24,7 +26,7 @@ ZbEndPoint::ZbEndPoint(uint8_t id, uint16_t device_id,
     cluster0.next = 0;
 
     _clusterList.push_back(cluster0);
-    
+    */
 
     _cluster_list = esp_zb_zcl_cluster_list_create();
 
@@ -33,6 +35,8 @@ ZbEndPoint::ZbEndPoint(uint8_t id, uint16_t device_id,
     _endpoint_config.app_device_id = device_id;
     _endpoint_config.app_profile_id = profile_id;
     _endpoint_config.app_device_version = device_version;
+
+
 /*
     esp_zb_basic_cluster_cfg_s basic_cfg;
     basic_cfg.zcl_version  =    ESP_ZB_ZCL_BASIC_ZCL_VERSION_DEFAULT_VALUE;
@@ -60,7 +64,8 @@ ZbEndPoint::ZbEndPoint(uint8_t id, uint16_t device_id,
                 ESP_ZB_ZCL_CLUSTER_CLIENT_ROLE));
 
 
-    printClusters();
+    std::cout << "---------- Clusters DEBUG HELPER ----------" << std::endl;
+    ZbDebug::printClusterList(_cluster_list);
 */
     //initZbCluster();
 }
@@ -68,10 +73,12 @@ ZbEndPoint::ZbEndPoint(uint8_t id, uint16_t device_id,
 
 ZbEndPoint::~ZbEndPoint()
 {
+    /*
     for(ZbCluster* cluster: _vecCluster)
         delete cluster;
     
-    _vecCluster.clear();   
+    _vecCluster.clear(); 
+    */  
 }
 
 void ZbEndPoint::initZbCluster()
@@ -124,8 +131,21 @@ ZbEndPoint::ZbEndPoint(const ZbEndPoint& other)
 
 esp_zb_cluster_list_t* ZbEndPoint::getClusterList()
 {
+    std::cout << "---------- Clusters ZBC++ ----------" << std::endl;
+    std::cout << "Nb Clusters " << _clusterList.size() << std::endl;
+    std::cout << "Cluster list addr" << &_clusterList.front() << std::endl;
+    std::cout << "attr sizeof" << sizeof(esp_zb_attribute_list_t) << std::endl;
+    //ZbDebug::printClusterList(&_clusterList.front());
+    std::cout << "---------- Clusters ZBC++ ----------" << std::endl;
+    std::cout << "---------- Clusters ZBC++ ----------" << std::endl;
+    std::cout << "---------- Clusters ZBC++ ----------" << std::endl;
+    std::cout << "---------- Clusters ZBC++ ----------" << std::endl;
+    ZbDebug::printClusterList(_cluster_list);
+   
+   
+    
     return _cluster_list;
-    return (&_clusterList.front());
+    //return (&_clusterList.front());
 }
 
 esp_zb_endpoint_config_t ZbEndPoint::getConfig()
@@ -142,17 +162,35 @@ void ZbEndPoint::addCluster(ZbCluster* cluster)
     newClusterList.cluster = *(cluster->getClusterStruct());
     newClusterList.next = 0;
 
+    cluster->addToList(_cluster_list);
+
     // Update next pointer
-    esp_zb_cluster_list_t** n = &_clusterList.back().next;
+  /*  
+    //esp_zb_cluster_list_t** n = &_clusterList.back().next;
     _clusterList.push_back(newClusterList);
-    (*n) = &_clusterList.back();
+    //(*n) = &_clusterList.back();
+    
+
+
+    // Using _cluster_list
+    esp_zb_cluster_list_t** addr = &_cluster_list->next;
+    uint16_t count = 0;
+    while(*addr){
+        addr = &((*addr)->next);
+        std::cout << "add cluster Addr " << (*addr) << " - count " <<  count << std::endl;
+        count++;
+    }
+
+    
+    (*addr) = &_clusterList.back();
+    std::cout << "cluster added @ " << (*addr) << std::endl;
+    */
 
 }
 
 //////////////////////////////////////////////// DEBUG//////////////////////////////
 void ZbEndPoint::printClusters()
 {
-    std::cout << "---------- Clusters DEBUG HELPER ----------" << std::endl;
-    ZbDebug::printClusterList(_cluster_list);
+    
 }
 //////////////////////////////////////////////////////////////////////

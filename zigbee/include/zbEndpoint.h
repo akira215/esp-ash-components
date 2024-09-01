@@ -23,7 +23,7 @@ class ZbEndPoint
         std::list<esp_zb_cluster_list_t> _clusterList;
         esp_zb_cluster_list_t*      _cluster_list;
         esp_zb_attribute_list_t*    _basic_cluster;
-        std::vector<ZbCluster*>     _vecCluster;
+        std::vector<ZbCluster*>     _vecCluster; // TODO chane in std list
         esp_zb_endpoint_config_t    _endpoint_config;
         //uint8_t                     _id;
         esp_zb_identify_cluster_cfg_t _identify_cfg; //TODEL

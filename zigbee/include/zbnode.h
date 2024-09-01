@@ -45,15 +45,15 @@
 
 class ZbNode
 {
-    static std::list<ZbEndPoint>    _endPointList;
+    static std::list<ZbEndPoint*>   _endPointList;
     static std::list<ZbCluster>     _clusterList;
     static esp_zb_ep_list_t*        _ep_list;
 
-    static TaskHandle_t          _zbTask;
+    static TaskHandle_t             _zbTask;
 
     #ifdef ZB_USE_LED
-    static BlinkTask*           _ledBlinking;
-    static GpioOutput           _led;
+    static BlinkTask*   _ledBlinking;
+    static GpioOutput   _led;
     #endif
 public:
   
@@ -100,6 +100,8 @@ public:
     
     /// @brief create a new cluster
     ZbCluster* createCluster(uint16_t id, bool isClient);
+
+    ZbCluster* getCluster(uint16_t id, bool isClient);
 
 
 protected:

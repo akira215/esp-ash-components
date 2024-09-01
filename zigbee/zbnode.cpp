@@ -27,7 +27,7 @@
 // Static init
 TaskHandle_t ZbNode::_zbTask = NULL;
 esp_zb_ep_list_t* ZbNode::_ep_list = nullptr;
-std::list<ZbEndPoint> ZbNode::_endPointList = {};
+std::list<ZbEndPoint*> ZbNode::_endPointList = {};
 std::list<ZbCluster>  ZbNode::_clusterList = {};
 
 #ifdef ZB_USE_LED
@@ -269,14 +269,36 @@ void ZbNode::leaveNetwork()
 
 void ZbNode::start()
 {
+    //Register the device 
+    std::cout<<"ep list id "            << +(_ep_list->endpoint.ep_id) << std::endl;
+    std::cout<<"ep list profile id "<< +(_ep_list->endpoint.profile_id) << std::endl;
+    std::cout<<"ep list cluster count "<< +(_ep_list->endpoint.cluster_count) << std::endl;
+    
+    
+    std::cout<<"------------------------ep list next "<< _ep_list->next << std::endl;
+    std::cout<<"ep list id "            << +(_ep_list->next->endpoint.ep_id) << std::endl;
+    std::cout<<"ep list profile id "<< +(_ep_list->next->endpoint.profile_id) << std::endl;
+    std::cout<<"ep list cluster count "<< +(_ep_list->next->endpoint.cluster_count) << std::endl;
+    std::cout<<"ep list cluster list "<< (_ep_list->next->endpoint.cluster_list) << std::endl;
+
+
+
+
+
+
+
+
+
+
+    esp_zb_device_register(_ep_list);
+    std::cout<<"eRegister "<<  std::endl;
     //xTaskCreate(zbTask, "Zigbee_Device", 4096, NULL, 5, NULL);
-    xTaskCreate(zbTask, "Zigbee_Device", 4096, NULL, 5, &_zbTask);
+    xTaskCreate(zbTask, "Zigbee_Device", 8192, NULL, 5, &_zbTask);
 }
 
 void ZbNode::zbTask(void *pvParameters)
 {
-    //Register the device 
-    esp_zb_device_register(_ep_list);
+    
     
 
     // Config the reporting info  
@@ -310,20 +332,33 @@ void ZbNode::zbTask(void *pvParameters)
 void ZbNode::addEndPoint(ZbEndPoint& ep)
 {   
     ESP_LOGI(ZB_TAG,"Pushing back");
-    _endPointList.push_back(ep);
+    _endPointList.push_back(&ep);
 
     ESP_LOGI(ZB_TAG,"Adding EndPoint");
     esp_zb_ep_list_add_ep(_ep_list, 
-                        _endPointList.back().getClusterList(), 
-                        _endPointList.back().getConfig());
+                        _endPointList.back()->getClusterList(), 
+                        _endPointList.back()->getConfig());
 }
 
 /*---------------------------------------------------------------------------------------------*/
 
 ZbCluster* ZbNode::createCluster(uint16_t id, bool isClient)
 {
+    /*
     //ZbCluster newCluster(id, isClient);
     _clusterList.emplace_back(id, isClient);
-    
+    */
     return &_clusterList.back();
+}
+
+ZbCluster* ZbNode::getCluster(uint16_t id, bool isClient)
+{
+    ZbCluster* cluster = nullptr;
+    
+    for (ZbCluster& c : _clusterList) {
+        if((c.getId() == id)&&(c.isClient() == isClient))
+            cluster = &c;
+    }
+
+    return cluster;
 }
