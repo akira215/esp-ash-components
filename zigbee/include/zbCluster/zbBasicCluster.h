@@ -23,7 +23,7 @@ public:
         cfg.power_source = power_source;                                                                       
         _attr_list = esp_zb_basic_cluster_create(&cfg);
 
-        _init(0x0000, isClient);
+        _init(ESP_ZB_ZCL_CLUSTER_ID_BASIC, isClient);
     }
 
     virtual void addAttribute(uint16_t attr_id, void* value)

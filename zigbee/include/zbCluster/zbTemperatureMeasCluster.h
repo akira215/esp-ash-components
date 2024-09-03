@@ -25,7 +25,7 @@ public:
         cfg.max_value = max_value;                                                                   
         _attr_list = esp_zb_temperature_meas_cluster_create(&cfg);
 
-        _init(0x0402, isClient);
+        _init(ESP_ZB_ZCL_CLUSTER_ID_TEMP_MEASUREMENT, isClient);
     }
 
     virtual void addAttribute(uint16_t attr_id, void* value)

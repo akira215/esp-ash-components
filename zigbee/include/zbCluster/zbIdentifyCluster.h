@@ -20,7 +20,7 @@ public:
         cfg.identify_time  = identify_time;                                                                     
         _attr_list = esp_zb_identify_cluster_create(&cfg);
 
-        _init(0x0003, isClient);
+        _init(ESP_ZB_ZCL_CLUSTER_ID_IDENTIFY , isClient);
     }
 
     virtual void addAttribute(uint16_t attr_id, void* value)

@@ -156,6 +156,7 @@ void ZbNode::handleDeviceReboot(esp_err_t err)
             joinNetwork();
         } else {
             ESP_LOGI(ZB_TAG, "Device rebooted successfully");
+            //bindAttribute(10); //////////TODEL////////////////////////////////////////////////
         }
     } else {
         // commissioning failed 
@@ -165,11 +166,21 @@ void ZbNode::handleDeviceReboot(esp_err_t err)
 
 void ZbNode::handleNetworkStatus(esp_err_t err)
 {
+    
     #ifdef ZB_USE_LED
-    if(!_ledBlinking)
-        _ledBlinking = new BlinkTask(_led, 50); // very short flash
-    else
-        _ledBlinking->setBlinkPeriod(50);
+    if(isJoined()) 
+    {
+        if(_ledBlinking){
+        delete _ledBlinking;
+        _ledBlinking = nullptr;
+        }
+        _led.off();
+    } else {
+        if(!_ledBlinking)
+            _ledBlinking = new BlinkTask(_led, 50); // very short flash
+        else
+            _ledBlinking->setBlinkPeriod(50);
+    }
     #endif
     ESP_LOGI(ZB_TAG, "Network Layer Management, status: %s", 
                     esp_err_to_name(err));
@@ -289,8 +300,8 @@ void ZbNode::start()
 
 void ZbNode::zbTask(void *pvParameters)
 {
-
-     /* Config the reporting info  */
+/*
+    // Config the reporting info  
     esp_zb_zcl_reporting_info_t reporting_info;
     reporting_info.direction = ESP_ZB_ZCL_CMD_DIRECTION_TO_SRV;
     reporting_info.ep = 10;
@@ -298,15 +309,15 @@ void ZbNode::zbTask(void *pvParameters)
     reporting_info.cluster_role = ESP_ZB_ZCL_CLUSTER_SERVER_ROLE;
     reporting_info.dst.profile_id = ESP_ZB_AF_HA_PROFILE_ID;
     reporting_info.u.send_info.min_interval = 1;
-    reporting_info.u.send_info.max_interval = 0;
+    reporting_info.u.send_info.max_interval = 670;
     reporting_info.u.send_info.def_min_interval = 1;
-    reporting_info.u.send_info.def_max_interval = 0;
+    reporting_info.u.send_info.def_max_interval = 960;
     reporting_info.u.send_info.delta.u16 = 100;
     reporting_info.attr_id = ESP_ZB_ZCL_ATTR_TEMP_MEASUREMENT_VALUE_ID;
     reporting_info.manuf_code = ESP_ZB_ZCL_ATTR_NON_MANUFACTURER_SPECIFIC;
 
     esp_zb_zcl_update_reporting_info(&reporting_info);   
-
+*/
     //esp_zb_zcl_config_report_cmd_req();
 
     esp_zb_set_primary_network_channel_set(ESP_ZB_TRANSCEIVER_ALL_CHANNELS_MASK); //TODO evaluate this macro
@@ -332,7 +343,7 @@ void ZbNode::addEndPoint(ZbEndPoint& ep)
 }
 
 /*---------------------------------------------------------------------------------------------*/
-
+//// TODO include in class !
 static esp_err_t zb_attribute_reporting_handler(const esp_zb_zcl_report_attr_message_t *message)
 {
     ESP_RETURN_ON_FALSE(message, ESP_FAIL, ZB_TAG, "Empty message");
@@ -344,6 +355,22 @@ static esp_err_t zb_attribute_reporting_handler(const esp_zb_zcl_report_attr_mes
              message->attribute.data.value ? *(uint8_t *)message->attribute.data.value : 0);
     return ESP_OK;
 }
+
+//// TODO include in class !
+static esp_err_t handlingCmdDefaultResp(const esp_zb_zcl_cmd_default_resp_message_t *msg)
+{
+    
+    ESP_LOGI(ZB_TAG, "Received cmd default status(%d) form src endpoint(%d) cluster(0x%x) cmd(%d)", 
+                        msg->status_code,
+                        msg->info.src_endpoint, 
+                        msg->info.cluster, 
+                        msg->info.command.id);
+    ESP_LOGI(ZB_TAG, "direction(%d) is common(%d)", 
+                        msg->info.command.direction,
+                        msg->info.command.is_common);
+    return ESP_OK;   
+}
+
 
 esp_err_t ZbNode::handleZbActions(esp_zb_core_action_callback_id_t callback_id, 
                                         const void *message)
@@ -364,14 +391,7 @@ esp_err_t ZbNode::handleZbActions(esp_zb_core_action_callback_id_t callback_id,
         }
         break;
     case ESP_ZB_CORE_CMD_DEFAULT_RESP_CB_ID:
-        {
-        esp_zb_zcl_cmd_default_resp_message_t* msg = (esp_zb_zcl_cmd_default_resp_message_t*)message;
-        ESP_LOGI(ZB_TAG, "Received cmd default status(%d) form src endpoint(%d) cluster(0x%x) cmd(%d)", 
-                        msg->status_code,
-                        msg->info.src_endpoint, 
-                        msg->info.cluster, 
-                        msg->info.command.id);
-        }
+        ret = handlingCmdDefaultResp((esp_zb_zcl_cmd_default_resp_message_t *)message);
         break;
     /*
     case ESP_ZB_CORE_CMD_READ_ATTR_RESP_CB_ID:
@@ -386,4 +406,76 @@ esp_err_t ZbNode::handleZbActions(esp_zb_core_action_callback_id_t callback_id,
         break;
     }
     return ret;
+}
+
+void ZbNode::bindAttribute(uint8_t endpoint)
+{
+    //ESP_LOGI(ZB_TAG, "Sending esp_zb_zdo_ieee_addr_req");
+
+    esp_zb_zdo_bind_req_param_t bind_req;
+
+    esp_zb_ieee_addr_t extended_pan_id;
+    esp_zb_get_extended_pan_id(extended_pan_id);
+
+    ESP_LOGI(ZB_TAG, "Sending Bind Request to Coordinator address  \
+                    (Extended PAN ID: %02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x)",
+                    extended_pan_id[7], extended_pan_id[6], extended_pan_id[5], extended_pan_id[4],
+                    extended_pan_id[3], extended_pan_id[2], extended_pan_id[1], extended_pan_id[0]);
+              
+    /* bind the reporting clusters to ep */
+    memcpy(&(bind_req.dst_address_u.addr_long), extended_pan_id, sizeof(esp_zb_ieee_addr_t));
+    bind_req.dst_endp = 1; //coord.endpoint
+    bind_req.dst_addr_mode = ESP_ZB_ZDO_BIND_DST_ADDR_MODE_64_BIT_EXTENDED;
+    bind_req.req_dst_addr = 0x0000; // if the HA is coordinator, it is 0x0000 
+
+    esp_zb_get_long_address(bind_req.src_address);
+    //bind_req.req_dst_addr = esp_zb_get_short_address();
+    
+
+    bind_req.cluster_id = ESP_ZB_ZCL_CLUSTER_ID_TEMP_MEASUREMENT;
+    bind_req.src_endp = (uint8_t)10; //SRC endpoint
+
+    esp_zb_zdo_device_bind_req(&bind_req, bind_cb, NULL);
+              
+    
+    /*
+    esp_zb_zdo_bind_req_param_t bind_req;
+    esp_zb_ieee_addr_t ieee_addr;
+    esp_zb_get_long_address(ieee_addr);
+    memcpy(&(bind_req.src_address), ieee_addr, sizeof(esp_zb_ieee_addr_t));
+    bind_req.src_endp = endpoint;
+    bind_req.cluster_id = ESP_ZB_ZCL_CLUSTER_ID_TEMP_MEASUREMENT;
+    bind_req.dst_addr_mode = ESP_ZB_ZDO_BIND_DST_ADDR_MODE_64_BIT_EXTENDED;
+    bind_req.dst_address_u.addr_long = HA_IEEE_ADDRESS; // use the `esp_zb_zdo_ieee_addr_req()` to get it.
+    bind_req.dst_endp = HA_ENDPOINT; // use the `esp_zb_zdo_active_ep_req()` to get it.
+    bind_req.req_dst_addr = 0x0000; // if the HA is coordinator, it is 0x0000 
+    esp_zb_zdo_device_bind_req(&bind_req, bind_cb, NULL);
+*/
+}
+// static
+void ZbNode::bind_cb(esp_zb_zdp_status_t zdo_status, void *user_ctx)
+{
+    ESP_LOGI(ZB_TAG, "Receiving bind cb");
+    if (zdo_status == ESP_ZB_ZDP_STATUS_SUCCESS) {
+        ESP_LOGI(ZB_TAG, "bind cb ok");
+        /*
+        memcpy(&(on_off_light.ieee_addr), ieee_addr, sizeof(esp_zb_ieee_addr_t));
+        ESP_LOGI(TAG, "IEEE address: %02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x",
+                 ieee_addr[7], ieee_addr[6], ieee_addr[5], ieee_addr[4],
+                 ieee_addr[3], ieee_addr[2], ieee_addr[1], ieee_addr[0]);
+        // bind the on-off light to on-off switch 
+        esp_zb_zdo_bind_req_param_t bind_req;
+        memcpy(&(bind_req.src_address), on_off_light.ieee_addr, sizeof(esp_zb_ieee_addr_t));
+        bind_req.src_endp = on_off_light.endpoint;
+        bind_req.cluster_id = ESP_ZB_ZCL_CLUSTER_ID_ON_OFF;
+        bind_req.dst_addr_mode = ESP_ZB_ZDO_BIND_DST_ADDR_MODE_64_BIT_EXTENDED;
+        esp_zb_get_long_address(bind_req.dst_address_u.addr_long);
+        bind_req.dst_endp = HA_ONOFF_SWITCH_ENDPOINT;
+        bind_req.req_dst_addr = on_off_light.short_addr;
+        static zdo_info_user_ctx_t test_info_ctx;
+        test_info_ctx.endpoint = HA_ONOFF_SWITCH_ENDPOINT;
+        test_info_ctx.short_addr = on_off_light.short_addr;
+        esp_zb_zdo_device_bind_req(&bind_req, bind_cb, (void *) & (test_info_ctx));
+        */
+    }
 }

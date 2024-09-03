@@ -101,6 +101,9 @@ public:
     esp_err_t handleZbActions(esp_zb_core_action_callback_id_t callback_id, 
                     const void *message);
 
+    void bindAttribute(uint8_t endpoint);
+    static void bind_cb(esp_zb_zdp_status_t zdo_status, void *user_ctx);
+
 
 protected:
     
