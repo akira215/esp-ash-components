@@ -19,7 +19,10 @@
 
 class ZbCluster
 {
+    typedef void (*clusterCb)(uint16_t attrId, void* value);
+
     esp_zb_zcl_cluster_t _cluster;
+    clusterCb _callback = nullptr;
 
 protected:
     esp_zb_attribute_list_t* _attr_list;
@@ -31,17 +34,26 @@ public:
     /// @brief Constructor
     ZbCluster();
     ~ZbCluster();
-
+    
+    /// @brief To be implemented using esp_zb_xxxxx_cluster_add_attr
     virtual void addAttribute(uint16_t attr_id, void* value) = 0;
- 
+    
+    /// @brief To be implemented using esp_zb_cluster_list_add_xxxxx_cluster
     virtual void addToList(esp_zb_cluster_list_t* cluster_list) = 0;
 
     esp_zb_zcl_attr_t* getAttribute(uint16_t attr_id);
 
     uint16_t getId() const;
     bool isClient() const;
+    bool isServer() const;
 
     esp_zb_zcl_cluster_t* getClusterStruct();
+
+    void setCallback(clusterCb callback);
+
+    bool setAttribute(uint16_t attr_id, void* value);
+
+
 
 private:
 

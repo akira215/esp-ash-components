@@ -29,7 +29,7 @@
 // Static init
 TaskHandle_t ZbNode::_zbTask = NULL;
 esp_zb_ep_list_t* ZbNode::_ep_list = nullptr;
-std::list<ZbEndPoint*> ZbNode::_endPointList = {};
+std::map<uint8_t,ZbEndPoint*> ZbNode::_endPointMap = {};
 //std::list<ZbCluster>  ZbNode::_clusterList = {};
 
 #ifdef ZB_USE_LED
@@ -79,6 +79,32 @@ ZbNode::ZbNode()
 ZbNode::~ZbNode()
 {
    
+
+}
+
+void ZbNode::ledFlash(uint64_t speed)
+{
+    #ifdef ZB_USE_LED
+    if(speed == 0) 
+    {
+        if(_ledBlinking){
+        delete _ledBlinking;
+        _ledBlinking = nullptr;
+        }
+        _led.off();
+    } else if(speed == -1) {
+        if(_ledBlinking){
+        delete _ledBlinking;
+        _ledBlinking = nullptr;
+        }
+        _led.on();
+    } else {
+        if(!_ledBlinking)
+            _ledBlinking = new BlinkTask(_led, speed); // very short flash
+        else
+            _ledBlinking->setBlinkPeriod(speed);
+    }
+    #endif
 
 }
 
@@ -170,16 +196,9 @@ void ZbNode::handleNetworkStatus(esp_err_t err)
     #ifdef ZB_USE_LED
     if(isJoined()) 
     {
-        if(_ledBlinking){
-        delete _ledBlinking;
-        _ledBlinking = nullptr;
-        }
-        _led.off();
+       ledFlash(0);
     } else {
-        if(!_ledBlinking)
-            _ledBlinking = new BlinkTask(_led, 50); // very short flash
-        else
-            _ledBlinking->setBlinkPeriod(50);
+        ledFlash(50); //very short flash
     }
     #endif
     ESP_LOGI(ZB_TAG, "Network Layer Management, status: %s", 
@@ -200,14 +219,8 @@ void ZbNode::handleNetworkSteering(esp_err_t err)
                     extended_pan_id[3], extended_pan_id[2], extended_pan_id[1], extended_pan_id[0],
                     esp_zb_get_pan_id(), esp_zb_get_current_channel(), esp_zb_get_short_address());
         
-        #ifdef ZB_USE_LED
-        if(_ledBlinking){
-            delete _ledBlinking;
-            _ledBlinking = nullptr;
-        }
-        _led.off();
-        #endif
 
+        ledFlash(0);
     } else {
         uint32_t delay_ms = 500;
         ESP_LOGW(ZB_TAG, "Network steering was not successful (status: %s)", esp_err_to_name(err));
@@ -220,11 +233,7 @@ void ZbNode::handleNetworkSteering(esp_err_t err)
 void ZbNode::handleLeaveNetwork(esp_err_t err)
 {
     #ifdef ZB_USE_LED
-    if(_ledBlinking){
-        delete _ledBlinking;
-        _ledBlinking = nullptr;
-    }
-    _led.on();
+    ledFlash(-1);
     #endif
 
     ESP_LOGW(ZB_TAG, "Device left the network (status: %s)", esp_err_to_name(err));
@@ -240,12 +249,7 @@ void ZbNode::joinNetwork(uint8_t param)
     
     ESP_LOGI(ZB_TAG, "Start network steering");
 
-    #ifdef ZB_USE_LED
-    if(!_ledBlinking)
-        _ledBlinking = new BlinkTask(_led, FAST_BLINK); 
-    else
-         _ledBlinking->setBlinkPeriod(FAST_BLINK);
-    #endif
+    ledFlash(FAST_BLINK);
 
     esp_zb_bdb_start_top_level_commissioning(ESP_ZB_BDB_MODE_NETWORK_STEERING);
 
@@ -260,12 +264,7 @@ void ZbNode::leaveNetwork()
     
     ESP_LOGI(ZB_TAG, "Leaving the network");
 
-    #ifdef ZB_USE_LED
-    if(!_ledBlinking)
-        _ledBlinking = new BlinkTask(_led, 50); // very short flash
-    else
-        _ledBlinking->setBlinkPeriod(50);
-    #endif
+    ledFlash(50);
     
     esp_zb_zdo_mgmt_leave_req_param_t param{};
 
@@ -333,13 +332,14 @@ void ZbNode::zbTask(void *pvParameters)
 
 void ZbNode::addEndPoint(ZbEndPoint& ep)
 {   
-    ESP_LOGI(ZB_TAG,"Pushing back");
-    _endPointList.push_back(&ep);
+    uint8_t EpId = ep.getId();
+    ESP_LOGD(ZB_TAG,"Adding endpoint id %d", EpId);
+    _endPointMap[EpId] = &ep;
 
     ESP_LOGI(ZB_TAG,"Adding EndPoint");
     esp_zb_ep_list_add_ep(_ep_list, 
-                        _endPointList.back()->getClusterList(), 
-                        _endPointList.back()->getConfig());
+                        _endPointMap[EpId]->getClusterList(), 
+                        _endPointMap[EpId]->getConfig());
 }
 
 /*---------------------------------------------------------------------------------------------*/
@@ -371,25 +371,42 @@ static esp_err_t handlingCmdDefaultResp(const esp_zb_zcl_cmd_default_resp_messag
     return ESP_OK;   
 }
 
+esp_err_t ZbNode::handlingCmdSetAttribute(const esp_zb_zcl_set_attr_value_message_t *msg)
+{
+    
+    ESP_RETURN_ON_FALSE(msg, ESP_FAIL, ZB_TAG, "Empty message");
+    ESP_RETURN_ON_FALSE(msg->info.status == ESP_ZB_ZCL_STATUS_SUCCESS, ESP_ERR_INVALID_ARG, 
+                        ZB_TAG, "Set Attribute received message: error status(%d)",
+                        msg->info.status);
+    ESP_LOGI(ZB_TAG, "Received set attr message: endpoint(%d), cluster(0x%x), attribute(0x%x), data size(%d)", 
+            msg->info.dst_endpoint, msg->info.cluster,
+            msg->attribute.id, msg->attribute.data.size);
+    
+    bool res = _endPointMap[msg->info.dst_endpoint]->getCluster(msg->info.cluster)->
+                        setAttribute(msg->attribute.id, msg->attribute.data.value);
+    if(!res){
+        ESP_LOGW(ZB_TAG, "No callback for endpoint(%d), cluster(0x%x), attribute(0x%x)",
+                msg->info.dst_endpoint, msg->info.cluster,
+                msg->attribute.id);
+        return ESP_ERR_NOT_FOUND;
+    }
+
+    return ESP_OK;   
+}
+
 
 esp_err_t ZbNode::handleZbActions(esp_zb_core_action_callback_id_t callback_id, 
                                         const void *message)
 {
     esp_err_t ret = ESP_OK;
     switch (callback_id) {
+    case ESP_ZB_CORE_SET_ATTR_VALUE_CB_ID:
+        ret = handlingCmdSetAttribute((esp_zb_zcl_set_attr_value_message_t*)message);
+        break;
     case ESP_ZB_CORE_REPORT_ATTR_CB_ID:
         ret = zb_attribute_reporting_handler((esp_zb_zcl_report_attr_message_t *)message);
         break;
-    case ESP_ZB_CORE_SET_ATTR_VALUE_CB_ID:
-        {
-        esp_zb_zcl_set_attr_value_message_t* msg = (esp_zb_zcl_set_attr_value_message_t*)message;
-        ESP_LOGI(ZB_TAG, "Received set attr status(%d) form src endpoint(%d) cluster(0x%x) attr(0x%02x)", 
-                        msg->info.status,
-                        msg->info.dst_endpoint, 
-                        msg->info.cluster, 
-                        msg->attribute.id);
-        }
-        break;
+    
     case ESP_ZB_CORE_CMD_DEFAULT_RESP_CB_ID:
         ret = handlingCmdDefaultResp((esp_zb_zcl_cmd_default_resp_message_t *)message);
         break;
@@ -407,6 +424,8 @@ esp_err_t ZbNode::handleZbActions(esp_zb_core_action_callback_id_t callback_id,
     }
     return ret;
 }
+
+
 
 void ZbNode::bindAttribute(uint8_t endpoint)
 {

@@ -8,8 +8,7 @@
 #pragma once
 #include "esp_zigbee_core.h"
 #include "zbCluster.h"
-#include <vector>
-#include <list>
+#include <map>
 
 /* Attribute values in ZCL string format
  * The string should be started with the length of its own.
@@ -20,12 +19,13 @@
 
 class ZbEndPoint
 {
-        //std::list<esp_zb_cluster_list_t> _clusterList;
+        /// @brief only server clusters are stored here
+        std::map<uint16_t,ZbCluster*>     _serverClusterMap;
+        
         esp_zb_cluster_list_t*      _cluster_list;
         esp_zb_attribute_list_t*    _basic_cluster; //TODEL Debug only
-        //std::vector<ZbCluster*>     _vecCluster; // TODO chane in std list
+        
         esp_zb_endpoint_config_t    _endpoint_config;
-        //uint8_t                     _id;
         esp_zb_identify_cluster_cfg_t _identify_cfg; //TODEL
     public:
 
@@ -43,8 +43,19 @@ class ZbEndPoint
 
         esp_zb_cluster_list_t* getClusterList();
         esp_zb_endpoint_config_t getConfig();
+        
+        /// @brief Get Id of the endpoint
+        /// @return the id
+        uint8_t getId();
 
         void addCluster(ZbCluster* cluster);
+
+        /// @brief retrieve a pointer to a cluser
+        /// @param id id of the cluster
+        /// @return pointer on the cluster
+        ZbCluster* getCluster(uint16_t id);
+
+     
 
     private:
 

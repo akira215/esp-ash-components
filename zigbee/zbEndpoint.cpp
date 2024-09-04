@@ -125,10 +125,21 @@ esp_zb_endpoint_config_t ZbEndPoint::getConfig()
     return _endpoint_config;
 }
 
+uint8_t ZbEndPoint::getId()
+{
+    return _endpoint_config.endpoint;
+}
 
 
 void ZbEndPoint::addCluster(ZbCluster* cluster)
 {
     cluster->addToList(_cluster_list);
+    
+    if(cluster->isServer())
+        _serverClusterMap[cluster->getId()] = cluster;
 }
 
+ZbCluster* ZbEndPoint::getCluster(uint16_t id)
+{
+    return _serverClusterMap[id];
+}

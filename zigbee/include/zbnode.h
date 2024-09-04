@@ -14,7 +14,7 @@
 
 #include <esp_err.h>
 
-#include <list>
+#include <map>
 
 #if !CONFIG_ZB_LED || CONFIG_ZB_LED==-1 
     #warning "No led has been defined, zigbee lib will not use led"
@@ -45,7 +45,7 @@
 
 class ZbNode
 {
-    static std::list<ZbEndPoint*>   _endPointList;
+    static std::map<uint8_t,ZbEndPoint*>   _endPointMap;
     //static std::list<ZbCluster>     _clusterList;
     static esp_zb_ep_list_t*        _ep_list;
 
@@ -68,6 +68,11 @@ public:
 
     /// @brief Instanciante the obj or return the point to the unique obj
     static ZbNode* getInstance();
+
+    /// @brief Helper to flash led
+    /// @param speed flash cycle in ms. if 0, led will be set to off, 
+    /// if -1 led will be switch on
+    static void ledFlash(uint64_t speed);
 
     /// @brief Handle all the zb event. It is called by esp_zb_app_signal_handler
     void handleBdbEvent(esp_zb_app_signal_t *event);
@@ -115,6 +120,10 @@ protected:
     void handleLeaveNetwork(esp_err_t err);
     void handleNetworkStatus(esp_err_t err);
     //void handleRejoinFailure();
+
+
+    // Zb Actions
+    esp_err_t handlingCmdSetAttribute(const esp_zb_zcl_set_attr_value_message_t *msg);
 
 private:
     /// @brief Constructor is private (singleton)

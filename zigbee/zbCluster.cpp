@@ -41,7 +41,6 @@ void ZbCluster::_init(uint16_t id, bool isClient){
 
 esp_zb_zcl_cluster_t* ZbCluster::getClusterStruct()
 {
-    std::cout << "attr list addr" << (_cluster.attr_list) << std::endl;
     return &_cluster;
 }
 
@@ -63,5 +62,27 @@ bool ZbCluster::isClient() const
     if(_cluster.role_mask == ESP_ZB_ZCL_CLUSTER_CLIENT_ROLE)
         return true;
     
+    return false;
+}
+
+bool ZbCluster::isServer() const
+{
+    if(_cluster.role_mask == ESP_ZB_ZCL_CLUSTER_SERVER_ROLE)
+        return true;
+    
+    return false;
+}
+
+void ZbCluster::setCallback(clusterCb callback)
+{
+    _callback = callback;
+}
+
+bool ZbCluster::setAttribute(uint16_t attr_id, void* value)
+{
+    if(_callback){
+        _callback(attr_id, value);
+        return true;
+    }
     return false;
 }
