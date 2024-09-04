@@ -281,18 +281,10 @@ void ZbNode::leaveNetwork()
 
 void ZbNode::start()
 {
-    
-    std::cout<<"---------------------- ep list next ---------------"<< _ep_list->next << std::endl;
-    std::cout<<"ep list id "            << +(_ep_list->next->endpoint.ep_id) << std::endl;
-    std::cout<<"ep list profile id "<< +(_ep_list->next->endpoint.profile_id) << std::endl;
-    std::cout<<"ep list cluster count "<< +(_ep_list->next->endpoint.cluster_count) << std::endl;
-    std::cout<<"ep list cluster list "<< (_ep_list->next->endpoint.cluster_list) << std::endl;
-    std::cout<<"---------------------- ep list next ---------------"<< _ep_list->next << std::endl;
-    
     //Register the device 
     esp_zb_device_register(_ep_list);
     esp_zb_core_action_handler_register(zb_action_handler);
-    std::cout<<"eRegister "<<  std::endl;
+
     //xTaskCreate(zbTask, "Zigbee_Device", 4096, NULL, 5, NULL);
     xTaskCreate(zbTask, "Zigbee_Device", 8192, NULL, 5, &_zbTask);
 }
@@ -423,78 +415,4 @@ esp_err_t ZbNode::handleZbActions(esp_zb_core_action_callback_id_t callback_id,
         break;
     }
     return ret;
-}
-
-
-
-void ZbNode::bindAttribute(uint8_t endpoint)
-{
-    //ESP_LOGI(ZB_TAG, "Sending esp_zb_zdo_ieee_addr_req");
-
-    esp_zb_zdo_bind_req_param_t bind_req;
-
-    esp_zb_ieee_addr_t extended_pan_id;
-    esp_zb_get_extended_pan_id(extended_pan_id);
-
-    ESP_LOGI(ZB_TAG, "Sending Bind Request to Coordinator address  \
-                    (Extended PAN ID: %02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x)",
-                    extended_pan_id[7], extended_pan_id[6], extended_pan_id[5], extended_pan_id[4],
-                    extended_pan_id[3], extended_pan_id[2], extended_pan_id[1], extended_pan_id[0]);
-              
-    /* bind the reporting clusters to ep */
-    memcpy(&(bind_req.dst_address_u.addr_long), extended_pan_id, sizeof(esp_zb_ieee_addr_t));
-    bind_req.dst_endp = 1; //coord.endpoint
-    bind_req.dst_addr_mode = ESP_ZB_ZDO_BIND_DST_ADDR_MODE_64_BIT_EXTENDED;
-    bind_req.req_dst_addr = 0x0000; // if the HA is coordinator, it is 0x0000 
-
-    esp_zb_get_long_address(bind_req.src_address);
-    //bind_req.req_dst_addr = esp_zb_get_short_address();
-    
-
-    bind_req.cluster_id = ESP_ZB_ZCL_CLUSTER_ID_TEMP_MEASUREMENT;
-    bind_req.src_endp = (uint8_t)10; //SRC endpoint
-
-    esp_zb_zdo_device_bind_req(&bind_req, bind_cb, NULL);
-              
-    
-    /*
-    esp_zb_zdo_bind_req_param_t bind_req;
-    esp_zb_ieee_addr_t ieee_addr;
-    esp_zb_get_long_address(ieee_addr);
-    memcpy(&(bind_req.src_address), ieee_addr, sizeof(esp_zb_ieee_addr_t));
-    bind_req.src_endp = endpoint;
-    bind_req.cluster_id = ESP_ZB_ZCL_CLUSTER_ID_TEMP_MEASUREMENT;
-    bind_req.dst_addr_mode = ESP_ZB_ZDO_BIND_DST_ADDR_MODE_64_BIT_EXTENDED;
-    bind_req.dst_address_u.addr_long = HA_IEEE_ADDRESS; // use the `esp_zb_zdo_ieee_addr_req()` to get it.
-    bind_req.dst_endp = HA_ENDPOINT; // use the `esp_zb_zdo_active_ep_req()` to get it.
-    bind_req.req_dst_addr = 0x0000; // if the HA is coordinator, it is 0x0000 
-    esp_zb_zdo_device_bind_req(&bind_req, bind_cb, NULL);
-*/
-}
-// static
-void ZbNode::bind_cb(esp_zb_zdp_status_t zdo_status, void *user_ctx)
-{
-    ESP_LOGI(ZB_TAG, "Receiving bind cb");
-    if (zdo_status == ESP_ZB_ZDP_STATUS_SUCCESS) {
-        ESP_LOGI(ZB_TAG, "bind cb ok");
-        /*
-        memcpy(&(on_off_light.ieee_addr), ieee_addr, sizeof(esp_zb_ieee_addr_t));
-        ESP_LOGI(TAG, "IEEE address: %02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x",
-                 ieee_addr[7], ieee_addr[6], ieee_addr[5], ieee_addr[4],
-                 ieee_addr[3], ieee_addr[2], ieee_addr[1], ieee_addr[0]);
-        // bind the on-off light to on-off switch 
-        esp_zb_zdo_bind_req_param_t bind_req;
-        memcpy(&(bind_req.src_address), on_off_light.ieee_addr, sizeof(esp_zb_ieee_addr_t));
-        bind_req.src_endp = on_off_light.endpoint;
-        bind_req.cluster_id = ESP_ZB_ZCL_CLUSTER_ID_ON_OFF;
-        bind_req.dst_addr_mode = ESP_ZB_ZDO_BIND_DST_ADDR_MODE_64_BIT_EXTENDED;
-        esp_zb_get_long_address(bind_req.dst_address_u.addr_long);
-        bind_req.dst_endp = HA_ONOFF_SWITCH_ENDPOINT;
-        bind_req.req_dst_addr = on_off_light.short_addr;
-        static zdo_info_user_ctx_t test_info_ctx;
-        test_info_ctx.endpoint = HA_ONOFF_SWITCH_ENDPOINT;
-        test_info_ctx.short_addr = on_off_light.short_addr;
-        esp_zb_zdo_device_bind_req(&bind_req, bind_cb, (void *) & (test_info_ctx));
-        */
-    }
 }
