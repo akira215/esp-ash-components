@@ -8,6 +8,7 @@
 #pragma once
 
 #include "zbCluster.h"
+#include "zcl\esp_zigbee_zcl_identify.h"
 
 class ZbIdentifyCluster : public ZbCluster
 {

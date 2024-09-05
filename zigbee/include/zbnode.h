@@ -79,7 +79,7 @@ public:
    
     /// @brief Start Network steering
     /// @param param is not used, it is just to comply with esp_zb_callback_t
-    static void joinNetwork(uint8_t param = 0);
+    static esp_err_t joinNetwork(uint8_t param = 0);
 
     /// @brief will trigger the device to leave the network
     /// all related infos including the nvs will be deleted
@@ -116,13 +116,13 @@ protected:
 
     void handleDeviceReboot(esp_err_t err);
     void handleNetworkSteering(esp_err_t err);
-    //void handleNetworkJoinAndRejoin();
     void handleLeaveNetwork(esp_err_t err);
     void handleNetworkStatus(esp_err_t err);
     //void handleRejoinFailure();
 
 
     // Zb Actions
+    esp_err_t handlingCmdDefaultResp(const esp_zb_zcl_cmd_default_resp_message_t *msg);
     esp_err_t handlingCmdSetAttribute(const esp_zb_zcl_set_attr_value_message_t *msg);
 
 private:

@@ -240,18 +240,18 @@ void ZbNode::handleLeaveNetwork(esp_err_t err)
 }
 
 
-void ZbNode::joinNetwork(uint8_t param)
+esp_err_t ZbNode::joinNetwork(uint8_t param)
 {
     if(isJoined()){
         ESP_LOGI(ZB_TAG, "Device already joined, should leave before trying to join");
-        return;
+        return ESP_ERR_NOT_ALLOWED;
     }
     
     ESP_LOGI(ZB_TAG, "Start network steering");
 
     ledFlash(FAST_BLINK);
 
-    esp_zb_bdb_start_top_level_commissioning(ESP_ZB_BDB_MODE_NETWORK_STEERING);
+    return esp_zb_bdb_start_top_level_commissioning(ESP_ZB_BDB_MODE_NETWORK_STEERING);
 
 }
 
@@ -349,17 +349,17 @@ static esp_err_t zb_attribute_reporting_handler(const esp_zb_zcl_report_attr_mes
 }
 
 //// TODO include in class !
-static esp_err_t handlingCmdDefaultResp(const esp_zb_zcl_cmd_default_resp_message_t *msg)
+esp_err_t ZbNode::handlingCmdDefaultResp(const esp_zb_zcl_cmd_default_resp_message_t *msg)
 {
-    
-    ESP_LOGI(ZB_TAG, "Received cmd default status(%d) form src endpoint(%d) cluster(0x%x) cmd(%d)", 
+    ESP_RETURN_ON_FALSE(msg, ESP_FAIL, ZB_TAG, "Empty message");
+    ESP_RETURN_ON_FALSE(msg->info.status == ESP_ZB_ZCL_STATUS_SUCCESS, ESP_ERR_INVALID_ARG, 
+                        ZB_TAG, "Default response received message: error status(%d)",
+                        msg->info.status);
+    ESP_LOGI(ZB_TAG, "Default response status(%d) from src endpoint(%d) cluster(0x%x) cmd was(%d)", 
                         msg->status_code,
                         msg->info.src_endpoint, 
                         msg->info.cluster, 
-                        msg->info.command.id);
-    ESP_LOGI(ZB_TAG, "direction(%d) is common(%d)", 
-                        msg->info.command.direction,
-                        msg->info.command.is_common);
+                        msg->resp_to_cmd);
     return ESP_OK;   
 }
 

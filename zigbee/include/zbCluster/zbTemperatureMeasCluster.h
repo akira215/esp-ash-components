@@ -8,6 +8,7 @@
 #pragma once
 
 #include "zbCluster.h"
+#include "zcl\esp_zigbee_zcl_temperature_meas.h"
 
 class ZbTemperatureMeasCluster : public ZbCluster
 {
