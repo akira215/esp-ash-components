@@ -30,6 +30,11 @@ protected:
 protected:
     void _init(uint16_t id, bool isClient);
 
+    /// @brief Copy attributes from an existing ZbCluster
+    /// Attributes that already exists are not overided
+    /// @param other the source cluster
+    void _copyAttributes(const ZbCluster& other);
+
 public:
     /// @brief Constructor
     ZbCluster();
@@ -41,7 +46,11 @@ public:
     /// @brief To be implemented using esp_zb_cluster_list_add_xxxxx_cluster
     virtual void addToList(esp_zb_cluster_list_t* cluster_list) = 0;
 
-    esp_zb_zcl_attr_t* getAttribute(uint16_t attr_id);
+
+    /// @brief get a pointer tp attribute struct
+    /// @param id of the attribute
+    /// @return point to the esp_zb_zcl_attr_t, nullptr if attr does not exist
+    esp_zb_zcl_attr_t* getAttribute(uint16_t attr_id) const;
 
     uint16_t getId() const;
     bool isClient() const;
@@ -52,8 +61,6 @@ public:
     void setCallback(clusterCb callback);
 
     bool setAttribute(uint16_t attr_id, void* value);
-
-
 
 private:
 

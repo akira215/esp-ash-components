@@ -38,6 +38,18 @@ void ZbCluster::_init(uint16_t id, bool isClient){
     
 }
 
+void ZbCluster::_copyAttributes(const ZbCluster& other)
+{
+    esp_zb_attribute_list_t* attr_list = other._attr_list->next;
+
+    while(attr_list){
+        if (getAttribute(attr_list->attribute.id) == nullptr)
+           addAttribute(attr_list->attribute.id, attr_list->attribute.data_p);
+
+        attr_list = attr_list->next;
+    }
+
+}
 
 esp_zb_zcl_cluster_t* ZbCluster::getClusterStruct()
 {
@@ -45,11 +57,18 @@ esp_zb_zcl_cluster_t* ZbCluster::getClusterStruct()
 }
 
 
-esp_zb_zcl_attr_t* ZbCluster::getAttribute(uint16_t attr_id)
+esp_zb_zcl_attr_t* ZbCluster::getAttribute(uint16_t attr_id) const
 {
-    esp_zb_zcl_attr_t* attr = nullptr;
-    // TODO Implement
-    return attr;
+    esp_zb_attribute_list_t* attr_list = _attr_list->next;
+
+    while(attr_list->attribute.id != attr_id){
+        attr_list = attr_list->next;
+
+        if(!attr_list)
+            return nullptr;
+    }
+
+    return &(attr_list->attribute);
 }
 
 uint16_t ZbCluster::getId() const

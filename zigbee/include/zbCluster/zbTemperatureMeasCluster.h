@@ -20,7 +20,7 @@ public:
                 int16_t measured_value = ESP_ZB_ZCL_ATTR_TEMP_MEASUREMENT_VALUE_UNKNOWN
                 ) 
     {
-        esp_zb_temperature_meas_cluster_cfg_s cfg;
+        esp_zb_temperature_meas_cluster_cfg_t cfg;
         cfg.measured_value  = measured_value;
         cfg.min_value = min_value;                    
         cfg.max_value = max_value;                                                                   
@@ -28,6 +28,26 @@ public:
 
         _init(ESP_ZB_ZCL_CLUSTER_ID_TEMP_MEASUREMENT, isClient);
     }
+
+    ///@brief Copy constructor
+     ZbTemperatureMeasCluster(const  ZbTemperatureMeasCluster& other)
+    {
+        esp_zb_temperature_meas_cluster_cfg_t cfg;
+        cfg.measured_value = *((uint16_t*)(other.getAttribute((uint16_t)
+                            ESP_ZB_ZCL_ATTR_TEMP_MEASUREMENT_VALUE_ID)->data_p));
+        cfg.min_value = *((uint16_t*)(other.getAttribute((uint16_t)
+                            ESP_ZB_ZCL_ATTR_TEMP_MEASUREMENT_MIN_VALUE_ID)->data_p));
+        cfg.max_value = *((uint16_t*)(other.getAttribute((uint16_t)
+                            ESP_ZB_ZCL_ATTR_TEMP_MEASUREMENT_MAX_VALUE_ID)->data_p));
+        
+        
+        _attr_list = esp_zb_temperature_meas_cluster_create(&cfg);
+
+        _copyAttributes(other);
+
+        _init(ESP_ZB_ZCL_CLUSTER_ID_TEMP_MEASUREMENT, other.isClient());
+    }
+
 
     virtual void addAttribute(uint16_t attr_id, void* value)
     {

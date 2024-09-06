@@ -325,10 +325,9 @@ void ZbNode::zbTask(void *pvParameters)
 void ZbNode::addEndPoint(ZbEndPoint& ep)
 {   
     uint8_t EpId = ep.getId();
-    ESP_LOGD(ZB_TAG,"Adding endpoint id %d", EpId);
+    ESP_LOGI(ZB_TAG,"Adding endpoint id %d", EpId);
     _endPointMap[EpId] = &ep;
 
-    ESP_LOGI(ZB_TAG,"Adding EndPoint");
     esp_zb_ep_list_add_ep(_ep_list, 
                         _endPointMap[EpId]->getClusterList(), 
                         _endPointMap[EpId]->getConfig());

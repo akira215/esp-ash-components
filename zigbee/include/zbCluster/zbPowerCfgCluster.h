@@ -44,6 +44,32 @@ public:
         _init(ESP_ZB_ZCL_CLUSTER_ID_POWER_CONFIG, isClient);
     }
 
+    ///@brief Copy constructor
+    ZbPowerCfgCluster(const ZbPowerCfgCluster& other)
+    {
+        esp_zb_power_config_cluster_cfg_t cfg;
+        cfg.main_voltage  = *((uint16_t*)(other.getAttribute((uint16_t)
+                            ESP_ZB_ZCL_ATTR_POWER_CONFIG_MAINS_VOLTAGE_ID)->data_p));
+        cfg.main_freq =  *((uint8_t*)(other.getAttribute((uint16_t)
+                            ESP_ZB_ZCL_ATTR_POWER_CONFIG_MAINS_FREQUENCY_ID)->data_p));
+        cfg.main_alarm_mask = *((uint8_t*)(other.getAttribute((uint16_t)
+                            ESP_ZB_ZCL_ATTR_POWER_CONFIG_MAINS_ALARM_MASK_ID)->data_p));
+        cfg.main_voltage_min = *((uint16_t*)(other.getAttribute((uint16_t)
+                            ESP_ZB_ZCL_ATTR_POWER_CONFIG_MAINS_VOLTAGE_MIN_THRESHOLD)->data_p));
+        cfg.main_voltage_max =  *((uint16_t*)(other.getAttribute((uint16_t)
+                            ESP_ZB_ZCL_ATTR_POWER_CONFIG_MAINS_VOLTAGE_MAX_THRESHOLD)->data_p));
+        cfg.main_voltage_dwell =  *((uint16_t*)(other.getAttribute((uint16_t)
+                            ESP_ZB_ZCL_ATTR_POWER_CONFIG_MAINS_DWELL_TRIP_POINT )->data_p));
+        
+        
+        _attr_list = esp_zb_power_config_cluster_create(&cfg);
+
+        _copyAttributes(other);
+
+        _init(ESP_ZB_ZCL_CLUSTER_ID_POWER_CONFIG, other.isClient());
+    }
+
+
     virtual void addAttribute(uint16_t attr_id, void* value)
     {
         ESP_ERROR_CHECK(esp_zb_power_config_cluster_add_attr(_attr_list, 

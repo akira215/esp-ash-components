@@ -24,6 +24,21 @@ public:
         _init(ESP_ZB_ZCL_CLUSTER_ID_IDENTIFY , isClient);
     }
 
+    ///@brief Copy constructor
+    ZbIdentifyCluster(const ZbIdentifyCluster& other)
+    {
+        esp_zb_identify_cluster_cfg_s cfg;
+        cfg.identify_time = *((uint16_t*)(other.getAttribute((uint16_t)
+                            ESP_ZB_ZCL_ATTR_IDENTIFY_IDENTIFY_TIME_ID)->data_p));
+
+        _attr_list = esp_zb_identify_cluster_create(&cfg);
+
+        _copyAttributes(other);
+
+        _init(ESP_ZB_ZCL_CLUSTER_ID_IDENTIFY, other.isClient());
+    }
+
+
     virtual void addAttribute(uint16_t attr_id, void* value)
     {
         ESP_ERROR_CHECK(esp_zb_identify_cluster_add_attr(_attr_list, 

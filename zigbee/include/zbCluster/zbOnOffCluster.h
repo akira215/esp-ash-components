@@ -25,6 +25,21 @@ public:
         _init(ESP_ZB_ZCL_CLUSTER_ID_ON_OFF, isClient);
     }
 
+    ///@brief Copy constructor
+    ZbOnOffCluster(const ZbOnOffCluster& other)
+    {
+        esp_zb_on_off_cluster_cfg_t cfg;
+        cfg.on_off = *((bool*)(other.getAttribute((uint16_t)
+                            ESP_ZB_ZCL_ATTR_ON_OFF_ON_OFF_ID)->data_p));
+      
+        _attr_list = esp_zb_on_off_cluster_create(&cfg);
+
+        _copyAttributes(other);
+
+        _init(ESP_ZB_ZCL_CLUSTER_ID_ON_OFF, other.isClient());
+    }
+
+
     virtual void addAttribute(uint16_t attr_id, void* value)
     {
         ESP_ERROR_CHECK(esp_zb_on_off_cluster_add_attr(_attr_list, 
