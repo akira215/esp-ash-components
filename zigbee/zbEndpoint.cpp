@@ -8,7 +8,9 @@
 */
 
 #include "zbEndpoint.h"
-#include "zbDebug.h"
+
+
+#include "ha/esp_zigbee_ha_standard.h" //TODEL
 
 #include <iostream>
 
@@ -111,10 +113,19 @@ esp_zb_cluster_list_t* ZbEndPoint::getClusterList()
     std::cout << "attr sizeof" << sizeof(esp_zb_attribute_list_t) << std::endl;
     //ZbDebug::printClusterList(&_clusterList.front());
 */
+/*
     std::cout << "---------- Clusters ZBC++ ----------" << std::endl;
     ZbDebug::printClusterList(_cluster_list);
-   
-   
+    */
+   /*
+    std::cout << "---------- Clusters SWITCH ----------" << std::endl;
+    esp_zb_on_off_switch_cfg_t switch_cfg = ESP_ZB_DEFAULT_ON_OFF_SWITCH_CONFIG();
+    esp_zb_ep_list_t *esp_zb_on_off_switch_ep = esp_zb_on_off_switch_ep_create(2, &switch_cfg);
+    std::cout << "Endpoint Id : " << esp_zb_on_off_switch_ep->next->endpoint.ep_id << std::endl;
+    std::cout << "Cluster 0 : " << esp_zb_on_off_switch_ep->next->endpoint.cluster_list->cluster.cluster_id << std::endl;
+    //std::cout << "Cluster 0 : " << esp_zb_on_off_switch_ep->endpoint.cluster_list->cluster.cluster_id << std::endl;
+    ZbDebug::printClusterList(esp_zb_on_off_switch_ep->next->endpoint.cluster_list);
+*/
     
     return _cluster_list;
     //return (&_clusterList.front());

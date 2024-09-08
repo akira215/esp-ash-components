@@ -15,9 +15,9 @@ class ZbTemperatureMeasCluster : public ZbCluster
 
 public:
     ZbTemperatureMeasCluster( bool isClient = false,
-                int16_t min_value = ESP_ZB_ZCL_ATTR_TEMP_MEASUREMENT_MIN_VALUE_INVALID,
-                int16_t max_value = ESP_ZB_ZCL_ATTR_TEMP_MEASUREMENT_MAX_VALUE_INVALID,
-                int16_t measured_value = ESP_ZB_ZCL_ATTR_TEMP_MEASUREMENT_VALUE_UNKNOWN
+                int16_t min_value = ESP_ZB_ZCL_TEMP_MEASUREMENT_MIN_MEASURED_VALUE_DEFAULT,
+                int16_t max_value = ESP_ZB_ZCL_TEMP_MEASUREMENT_MAX_MEASURED_VALUE_DEFAULT,
+                int16_t measured_value = ESP_ZB_ZCL_TEMP_MEASUREMENT_MEASURED_VALUE_DEFAULT
                 ) 
     {
         esp_zb_temperature_meas_cluster_cfg_t cfg;

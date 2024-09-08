@@ -6,6 +6,8 @@
 */
 
 #pragma once
+#include "zbDebug.h" // TODEL
+
 #include "esp_zigbee_core.h"
 #include "zbCluster.h"
 #include <map>

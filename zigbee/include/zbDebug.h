@@ -1,11 +1,13 @@
+#pragma once
 
 #include <iostream>
+#include <string>
 #include "esp_zigbee_core.h"
 
 namespace ZbDebug //optional
 {
 
-void printAttr(esp_zb_attribute_list_t* attrList)
+inline void printAttr(esp_zb_attribute_list_t* attrList)
 {
     std::cout << "clusterId | nextAddr | attrId| type | access |  manuf  |  dataAddr  |  data " << std::hex << std::endl 
         << +(attrList->cluster_id) << " | " 
@@ -54,7 +56,7 @@ void printAttr(esp_zb_attribute_list_t* attrList)
         std::cout << std::endl << "--------------------------------------------------------------------------"<< std::endl;
 }
 
-void printAttrList(esp_zb_attribute_list_t* attr_list)
+inline void printAttrList(esp_zb_attribute_list_t* attr_list)
 {
     uint16_t counter = 0;
     while (attr_list){
@@ -68,7 +70,7 @@ void printAttrList(esp_zb_attribute_list_t* attr_list)
    
 }
 
-void printCluster(esp_zb_zcl_cluster_t* cluster)
+inline void printCluster(esp_zb_zcl_cluster_t* cluster)
 {
     std::cout << std::hex   << "============================== Cluster id " << (cluster->cluster_id) 
                             <<" ============================== "  << std::endl;
@@ -83,7 +85,7 @@ void printCluster(esp_zb_zcl_cluster_t* cluster)
     printAttrList(cluster->attr_list);    
 }
 
-void printClusterList(esp_zb_cluster_list_t* clusterList)
+inline void printClusterList(esp_zb_cluster_list_t* clusterList)
 {
     std::cout << std::hex << "================= Print Cluster List ======================= "  << std::endl;
     uint16_t counter = 0;
@@ -94,6 +96,25 @@ void printClusterList(esp_zb_cluster_list_t* clusterList)
         ++counter;
         std::cout << std::endl;
     }
+  
+}
+
+inline std::string addr2string(esp_zb_ieee_addr_t addr )
+{
+
+    std::string str;
+    str.reserve(24);   // two digits per character + :
+
+    static constexpr char hex[] = "0123456789ABCDEF";
+
+    for (int i = 7; i !=-1 ; i--) {
+       str.push_back(hex[(addr)[i] / 16]);
+       str.push_back(hex[(addr)[i] % 16]);
+       str.push_back(':');
+    }
+
+    return str;
+    
   
 }
 

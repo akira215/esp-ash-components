@@ -6,6 +6,7 @@
 */
 
 #pragma once
+#include "zbDebug.h" // TODEL
 
 #include "blinkTask.h"
 #include "esp_zigbee_core.h"
@@ -124,6 +125,12 @@ protected:
     // Zb Actions
     esp_err_t handlingCmdDefaultResp(const esp_zb_zcl_cmd_default_resp_message_t *msg);
     esp_err_t handlingCmdSetAttribute(const esp_zb_zcl_set_attr_value_message_t *msg);
+
+    static void print_binding_table_cb(const esp_zb_zdo_binding_table_info_t *record, void *user_ctx);
+    static void print_binding_table_next(uint8_t index);
+    static void print_binding_table() ;
+
+
 
 private:
     /// @brief Constructor is private (singleton)
