@@ -33,7 +33,7 @@ I2c::I2c(i2c_port_t port,
 
     //Create the new master bus;
     //esp_err_t status = ESP_OK;
-    esp_err_t status = i2c_new_master_bus(&i2c_mst_config, &_bus_handle);
+    ESP_ERROR_CHECK(i2c_new_master_bus(&i2c_mst_config, &_bus_handle));
     /*
     if (status == ESP_ERR_NOT_FOUND ) {
         throw std::out_of_range( "Error creating master I2C bus, no more port available" );
@@ -63,12 +63,12 @@ i2c_master_dev_handle_t I2c::addDevice(uint16_t device_address,
     if (ack_check)
         disable_ack_check = 0;
 
-    i2c_device_config_t dev_cfg = {
-        .dev_addr_length = dev_addr_length,
-        .device_address = device_address,
-        .scl_speed_hz = clk_speed_hz,
-        .scl_wait_us = timeout_us
-    };
+    i2c_device_config_t dev_cfg;
+    dev_cfg.dev_addr_length = dev_addr_length;
+    dev_addr_length = dev_addr_length;
+    dev_cfg.device_address = device_address;
+    dev_cfg.scl_speed_hz = clk_speed_hz;
+    dev_cfg.scl_wait_us = timeout_us;
     dev_cfg.flags.disable_ack_check = disable_ack_check;
 
 

@@ -48,6 +48,7 @@ void ZbCluster::_copyAttributes(const ZbCluster& other)
 
         attr_list = attr_list->next;
     }
+    _callback = other._callback;
 
 }
 

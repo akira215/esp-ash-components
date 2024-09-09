@@ -198,6 +198,8 @@ void ZbNode::handleDeviceReboot(esp_err_t err)
     } else {
         // commissioning failed 
         ESP_LOGW(ZB_TAG, "Failed to initialize Zigbee stack (status: %s)", esp_err_to_name(err));
+        ESP_LOGI(ZB_TAG, "Retrying in 1 sec...");
+        esp_zb_scheduler_alarm((esp_zb_callback_t)joinNetwork, 0, 1000);
     }
 }
 
@@ -291,58 +293,6 @@ void ZbNode::leaveNetwork()
 }
 
 
-///////////////////////////////////////////////////////////////////
-
-
-void ZbNode::print_binding_table_cb(const esp_zb_zdo_binding_table_info_t *record, void *user_ctx) {
-	if (!record) {
-		ESP_LOGI(ZB_TAG, "Binding table nullptr");
-		return;
-	}
-/*
-	ESP_LOGI(ZB_TAG, "%03u/%03u [%02x,%02x]: %s/%u/%04x -> %s/%u",
-		record->index, record->total, record->count, record->status,
-		zigbee_address_string(record->record.src_address).c_str(),
-		record->record.src_endp, record->record.cluster_id,
-		(record->record.dst_addr_mode == ESP_ZB_ZDO_BIND_DST_ADDR_MODE_16_BIT_GROUP
-			? zigbee_address_string(record->record.dst_address.addr_short).c_str()
-			: zigbee_address_string(record->record.dst_address.addr_long).c_str()),
-		record->record.dst_endp);
-  */  
-    ESP_LOGI(ZB_TAG, "%03u/%03u [%02x,%02x]: %s/%u/%04x -> %s/%u",
-		record->index, record->total, record->count, record->status,
-        ZbDebug::addr2string(record->record->src_address).c_str(),
-        record->record->src_endp, record->record->cluster_id,
-        
-        (record->record->dst_addr_mode == ESP_ZB_ZDO_BIND_DST_ADDR_MODE_16_BIT_GROUP
-			? "ZbDebug::addr2string(record->record->dst_address.addr_short).c_str()"
-			: ZbDebug::addr2string(record->record->dst_address.addr_long).c_str()),
-            
-		record->record->dst_endp);
-
-	if (record->index + 1 < record->total) {
-		esp_zb_scheduler_alarm_cancel(print_binding_table_next, record->index + 1);
-		esp_zb_scheduler_alarm(print_binding_table_next, record->index + 1, 100);
-	}
-}
-
-void ZbNode::print_binding_table_next(uint8_t index) {
-	esp_zb_zdo_mgmt_bind_param_t req{};
-	req.start_index = index;
-	req.dst_addr = esp_zb_get_short_address();
-
-	esp_zb_zdo_binding_table_req(&req, print_binding_table_cb, nullptr);
-}
-
-
-void ZbNode::print_binding_table() {
-	ESP_LOGI(ZB_TAG, "Binding table:");
-	print_binding_table_next(0);
-}
-
-////////////////////////////////////////////////////////////////////////
-
-
 
 void ZbNode::start()
 {
@@ -384,7 +334,7 @@ void ZbNode::zbTask(void *pvParameters)
     ESP_ERROR_CHECK(esp_zb_start(false));
 
     //esp_zb_main_loop_iteration();
-    print_binding_table();
+    ZbDebug::print_binding_table(); //TO DEL
 
     esp_zb_stack_main_loop();
 }
