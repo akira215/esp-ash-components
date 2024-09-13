@@ -76,7 +76,9 @@ public:
     static void ledFlash(uint64_t speed);
 
     /// @brief Handle all the zb event. It is called by esp_zb_app_signal_handler
-    void handleBdbEvent(esp_zb_app_signal_t *event);
+    void handleBdbEvent(esp_zb_app_signal_type_t signal_type,
+                        esp_err_t status,
+                        uint32_t *p_data);
    
     /// @brief Start Network steering
     /// @param param is not used, it is just to comply with esp_zb_callback_t
@@ -100,8 +102,11 @@ public:
     static TaskHandle_t getZbTask() { return _zbTask; }
 
 
-    /// @brief get the handle to the zbtask
+    /// @brief add the endpoint to the Node
     void addEndPoint(ZbEndPoint& ep);
+
+    /// @brief retrive a pointer to the endpoint from the endpoint id
+    ZbEndPoint* getEndPoint(uint8_t endp_id);
 
      /// @brief Handle zb actions
     esp_err_t handleZbActions(esp_zb_core_action_callback_id_t callback_id, 
@@ -118,7 +123,7 @@ protected:
     void handleDeviceReboot(esp_err_t err);
     void handleNetworkSteering(esp_err_t err);
     void handleLeaveNetwork(esp_err_t err);
-    void handleNetworkStatus(esp_err_t err);
+    void handleNetworkStatus(esp_err_t err, void* data);
     //void handleRejoinFailure();
 
 

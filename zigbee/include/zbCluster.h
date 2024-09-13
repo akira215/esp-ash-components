@@ -12,10 +12,12 @@
 #include <memory>
 #include <cstring>
 #include <string>
+
 #include "esp_zigbee_core.h"
 
 
 #include <iostream> // TODEL
+class ZbEndPoint;
 
 class ZbCluster
 {
@@ -23,6 +25,7 @@ class ZbCluster
 
     esp_zb_zcl_cluster_t _cluster;
     clusterCb _callback = nullptr;
+    ZbEndPoint* _endPoint = nullptr;
 
 protected:
     esp_zb_attribute_list_t* _attr_list;
@@ -56,11 +59,14 @@ public:
     bool isClient() const;
     bool isServer() const;
 
+    void setEndPoint(ZbEndPoint* parent);
+
     esp_zb_zcl_cluster_t* getClusterStruct();
 
     void setCallback(clusterCb callback);
 
     bool setAttribute(uint16_t attr_id, void* value);
+    uint8_t sendCommand(uint16_t cmd); // TODO add data
 
 private:
 

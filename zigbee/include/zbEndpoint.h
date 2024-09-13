@@ -22,7 +22,8 @@
 class ZbEndPoint
 {
         /// @brief only server clusters are stored here
-        std::map<uint16_t,ZbCluster*>     _serverClusterMap;
+        std::map<uint16_t,ZbCluster*> _serverClusterMap;
+        std::map<uint16_t,ZbCluster*> _clientClusterMap;
         
         esp_zb_cluster_list_t*      _cluster_list;
         esp_zb_attribute_list_t*    _basic_cluster; //TODEL Debug only
@@ -55,9 +56,7 @@ class ZbEndPoint
         /// @brief retrieve a pointer to a cluser
         /// @param id id of the cluster
         /// @return pointer on the cluster
-        ZbCluster* getCluster(uint16_t id);
-
-     
+        ZbCluster* getCluster(uint16_t id, bool isClient);
 
     private:
 

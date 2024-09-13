@@ -27,37 +27,6 @@ ZbEndPoint::ZbEndPoint(uint8_t id, uint16_t device_id,
     _endpoint_config.app_device_version = device_version;
 
 
-/*
-    esp_zb_basic_cluster_cfg_s basic_cfg;
-    basic_cfg.zcl_version  =    ESP_ZB_ZCL_BASIC_ZCL_VERSION_DEFAULT_VALUE;
-    basic_cfg.power_source = ESP_ZB_ZCL_BASIC_POWER_SOURCE_DEFAULT_VALUE;                                                                       
-    _basic_cluster = esp_zb_basic_cluster_create(&basic_cfg);
-
-    ESP_ERROR_CHECK(esp_zb_basic_cluster_add_attr(_basic_cluster, 
-                            ESP_ZB_ZCL_ATTR_BASIC_MANUFACTURER_NAME_ID, 
-                            (void*)MANUFACTURER_NAME));
-    ESP_ERROR_CHECK(esp_zb_basic_cluster_add_attr(_basic_cluster, 
-                            ESP_ZB_ZCL_ATTR_BASIC_MODEL_IDENTIFIER_ID, 
-                            (void*)MODEL_IDENTIFIER));
-
-    ESP_ERROR_CHECK(esp_zb_cluster_list_add_basic_cluster(_cluster_list, _basic_cluster, 
-                            ESP_ZB_ZCL_CLUSTER_SERVER_ROLE));
-    
-    
-
-    _identify_cfg.identify_time = ESP_ZB_ZCL_IDENTIFY_IDENTIFY_TIME_DEFAULT_VALUE;    
-    ESP_ERROR_CHECK(esp_zb_cluster_list_add_identify_cluster(_cluster_list, 
-                esp_zb_identify_cluster_create(&_identify_cfg), 
-                ESP_ZB_ZCL_CLUSTER_SERVER_ROLE));
-    ESP_ERROR_CHECK(esp_zb_cluster_list_add_identify_cluster(_cluster_list, 
-                esp_zb_zcl_attr_list_create(ESP_ZB_ZCL_CLUSTER_ID_IDENTIFY), 
-                ESP_ZB_ZCL_CLUSTER_CLIENT_ROLE));
-
-
-    std::cout << "---------- Clusters DEBUG HELPER ----------" << std::endl;
-    ZbDebug::printClusterList(_cluster_list);
-*/
-    //initZbCluster();
 }
 
 
@@ -145,12 +114,18 @@ uint8_t ZbEndPoint::getId()
 void ZbEndPoint::addCluster(ZbCluster* cluster)
 {
     cluster->addToList(_cluster_list);
+    cluster->setEndPoint(this);
     
     if(cluster->isServer())
         _serverClusterMap[cluster->getId()] = cluster;
+    else
+        _clientClusterMap[cluster->getId()] = cluster;
 }
 
-ZbCluster* ZbEndPoint::getCluster(uint16_t id)
+ZbCluster* ZbEndPoint::getCluster(uint16_t id, bool isClient)
 {
+    if (isClient)
+        return _clientClusterMap[id];
+
     return _serverClusterMap[id];
 }

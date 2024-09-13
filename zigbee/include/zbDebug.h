@@ -27,7 +27,7 @@ void printClusterList(esp_zb_cluster_list_t* clusterList);
 
 ///////////////////////////////////// Address ///////////////////////////
 
-std::string addr2string(esp_zb_ieee_addr_t addr );
+std::string addr2string(const esp_zb_ieee_addr_t addr );
 
 ///////////////////////////////////// Binding table ///////////////////////////
 
@@ -36,5 +36,5 @@ void print_binding_table_cb(const esp_zb_zdo_binding_table_info_t *record,
 
 void print_binding_table_next(uint8_t index); 
 
-void print_binding_table(); 
+void print_binding_table(const esp_zb_zdo_binding_table_record_t *record); 
 } // namespace ZbDebug

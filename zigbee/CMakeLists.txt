@@ -1,4 +1,8 @@
-set(SOURCES zbNode.cpp zbEndpoint.cpp zbCluster.cpp zbDebug.cpp)
+set(SOURCES zbNode.cpp 
+            zbEndpoint.cpp 
+            zbCluster.cpp 
+            zbDebug.cpp
+            zbApsData.cpp)
             
 idf_component_register(SRCS ${SOURCES}
                     INCLUDE_DIRS include include/zbCluster

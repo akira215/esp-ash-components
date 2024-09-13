@@ -7,6 +7,11 @@
 
 #include "zbNode.h"
 
+
+
+
+#include "zbApsData.h"
+
 #include <stdio.h>
 
 #define LOG_LOCAL_LEVEL ESP_LOG_VERBOSE
@@ -41,13 +46,16 @@ GpioOutput ZbNode::_led { (gpio_num_t)CONFIG_ZB_LED }; //TODO led pin number in 
 
 static const char *ZB_TAG = "ZB_CPP";
 
+
 /// @brief this Callback shall be implemented in esp_zb stack
 /// it just call the ZbNode method
 /// @param event 
 /// @return 
-void esp_zb_app_signal_handler(esp_zb_app_signal_t *signal_struct)
+extern "C" void esp_zb_app_signal_handler(esp_zb_app_signal_t *signal_struct)
 {
-    ZbNode::getInstance()->handleBdbEvent(signal_struct);
+    ZbNode::getInstance()->handleBdbEvent(static_cast<esp_zb_app_signal_type_t>(*signal_struct->p_app_signal),
+                            signal_struct->esp_err_status,
+                            static_cast<uint32_t*>(esp_zb_app_signal_get_params(signal_struct->p_app_signal)));
 }
 
 static esp_err_t zb_action_handler(esp_zb_core_action_callback_id_t callback_id, 
@@ -56,12 +64,11 @@ static esp_err_t zb_action_handler(esp_zb_core_action_callback_id_t callback_id,
     return ZbNode::getInstance()->handleZbActions(callback_id, message);               
 }
 
-static bool zb_apsde_data_indication_handler(esp_zb_apsde_data_ind_t ind)
+static bool zb_raw_command_handler(uint8_t bufid)
 {
-    if (!ind.status && ind.cluster_id == 0xFFF1 && ind.profile_id == 0x0104 && ind.dst_endpoint == 10) {
-        ESP_LOGI(ZB_TAG, "APS data size: %ld", ind.asdu_length);
-        return true;
-    }
+    ESP_LOGI(ZB_TAG, "Raw command handler %d", bufid);
+    //If the bufid has been processed in the callback, it should be freed using the zb_zcl_send_default_handler().
+
     return false;
 }
 
@@ -143,42 +150,47 @@ bool ZbNode::isJoined()
     return esp_zb_bdb_dev_joined();
 }
 
-void ZbNode::handleBdbEvent(esp_zb_app_signal_t *event)
+//void ZbNode::handleBdbEvent(esp_zb_app_signal_t *event)
+void ZbNode::handleBdbEvent(esp_zb_app_signal_type_t signal_type,
+                        esp_err_t status,
+                        uint32_t *p_data)
 {
-    uint32_t *p_sg_p     = event->p_app_signal;
-    esp_err_t err_status = event->esp_err_status;
-    esp_zb_app_signal_type_t sig_type = static_cast<esp_zb_app_signal_type_t>(*p_sg_p);
-
-    switch(sig_type)
+    switch(signal_type)
     {
         case ESP_ZB_ZDO_SIGNAL_SKIP_STARTUP:
             ESP_LOGD(ZB_TAG, "Initialize Zigbee stack");
             esp_zb_bdb_start_top_level_commissioning(ESP_ZB_BDB_MODE_INITIALIZATION);
             break;
         case ESP_ZB_ZDO_SIGNAL_LEAVE:
-            handleLeaveNetwork(err_status);
+            handleLeaveNetwork(status);
             break;
         case ESP_ZB_BDB_SIGNAL_DEVICE_FIRST_START:
         case ESP_ZB_BDB_SIGNAL_DEVICE_REBOOT:
-            handleDeviceReboot(err_status);
+            handleDeviceReboot(status);
             break;
         case ESP_ZB_BDB_SIGNAL_STEERING:
-            handleNetworkSteering(err_status);
+            handleNetworkSteering(status);
             break;
         case ESP_ZB_ZDO_SIGNAL_PRODUCTION_CONFIG_READY:
             // esp_zb_set_node_descriptor_manufacturer_code(uint16_t manufacturer_code);
-            ESP_LOGD(ZB_TAG, "Config Ready, status: %s ",esp_err_to_name(err_status));
+            ESP_LOGD(ZB_TAG, "Config Ready, status: %s ",esp_err_to_name(status));
             break;
         case ESP_ZB_SE_SIGNAL_REJOIN:
-            ESP_LOGD(ZB_TAG, "Device Rejoin: %s ",esp_err_to_name(err_status));
+            ESP_LOGD(ZB_TAG, "Device Rejoin: %s ",esp_err_to_name(status));
             break;
         case ESP_ZB_NLME_STATUS_INDICATION:
-            handleNetworkStatus(err_status);
+            handleNetworkStatus(status, static_cast<void*>(p_data));
+            break;
+        case ESP_ZB_BDB_SIGNAL_FINDING_AND_BINDING_TARGET_FINISHED:
+            ESP_LOGI(ZB_TAG, "*************Binding Target ****************");
+            break;
+        case ESP_ZB_BDB_SIGNAL_FINDING_AND_BINDING_INITIATOR_FINISHED:
+            ESP_LOGI(ZB_TAG, "*************Binding Initiator ****************");
             break;
         default:
             ESP_LOGW(ZB_TAG, "ZDO signal: %s (0x%x), status: %s", 
-                    esp_zb_zdo_signal_to_string(sig_type), sig_type,
-                    esp_err_to_name(err_status));
+                    esp_zb_zdo_signal_to_string(signal_type), signal_type,
+                    esp_err_to_name(status));
             break;
     }
 }
@@ -193,6 +205,7 @@ void ZbNode::handleDeviceReboot(esp_err_t err)
         } else {
             ESP_LOGD(ZB_TAG, "Device rebooted successfully, Short Address: (0x%04hx)",
                     esp_zb_get_short_address());
+            ledFlash(0);
             //bindAttribute(10); //////////TODEL////////////////////////////////////////////////
         }
     } else {
@@ -203,19 +216,23 @@ void ZbNode::handleDeviceReboot(esp_err_t err)
     }
 }
 
-void ZbNode::handleNetworkStatus(esp_err_t err)
+void ZbNode::handleNetworkStatus(esp_err_t err, void* data)
 {
     
-    #ifdef ZB_USE_LED
     if(isJoined()) 
     {
        ledFlash(0);
     } else {
         ledFlash(50); //very short flash
     }
-    #endif
-    ESP_LOGD(ZB_TAG, "Network Layer Management, status: %s", 
-                    esp_err_to_name(err));
+
+    struct nlme_status_indication {
+				uint8_t status;
+				uint16_t network_addr;
+				uint8_t unknown_command_id;
+			} __attribute__((packed)) *params = static_cast<struct nlme_status_indication*>(data);
+    ESP_LOGW(ZB_TAG, "NLME status indication: %02x addr(0x%04x) Cmd(%02x)",
+				params->status, params->network_addr, params->unknown_command_id);
 }
 
 void ZbNode::handleNetworkSteering(esp_err_t err)
@@ -292,16 +309,14 @@ void ZbNode::leaveNetwork()
 
 }
 
-
-
 void ZbNode::start()
 {
     //Register the device 
     esp_zb_device_register(_ep_list);
     esp_zb_core_action_handler_register(zb_action_handler);
-
-
-    esp_zb_aps_data_indication_handler_register(zb_apsde_data_indication_handler);
+  //  esp_zb_aps_data_indication_handler_register(zb_apsde_data_indication_handler);
+   // esp_zb_aps_data_confirm_handler_register(zb_aps_data_confirm_handler);
+    //esp_zb_raw_command_handler_register(zb_raw_command_handler);
 
     //xTaskCreate(zbTask, "Zigbee_Device", 4096, NULL, 5, NULL);
     xTaskCreate(zbTask, "Zigbee_Device", 8192, NULL, 5, &_zbTask);
@@ -333,9 +348,6 @@ void ZbNode::zbTask(void *pvParameters)
     //esp_zb_set_secondary_network_channel_set(ESP_ZB_SECONDARY_CHANNEL_MASK);
     ESP_ERROR_CHECK(esp_zb_start(false));
 
-    //esp_zb_main_loop_iteration();
-    ZbDebug::print_binding_table(); //TO DEL
-
     esp_zb_stack_main_loop();
 }
 
@@ -351,6 +363,10 @@ void ZbNode::addEndPoint(ZbEndPoint& ep)
     esp_zb_ep_list_add_ep(_ep_list, 
                         _endPointMap[EpId]->getClusterList(), 
                         _endPointMap[EpId]->getConfig());
+}
+
+ZbEndPoint* ZbNode::getEndPoint(uint8_t endp_id){
+    return _endPointMap[endp_id];
 }
 
 /*---------------------------------------------------------------------------------------------*/
@@ -393,7 +409,7 @@ esp_err_t ZbNode::handlingCmdSetAttribute(const esp_zb_zcl_set_attr_value_messag
             msg->info.dst_endpoint, msg->info.cluster,
             msg->attribute.id, msg->attribute.data.size);
     
-    bool res = _endPointMap[msg->info.dst_endpoint]->getCluster(msg->info.cluster)->
+    bool res = _endPointMap[msg->info.dst_endpoint]->getCluster(msg->info.cluster, false)->
                         setAttribute(msg->attribute.id, msg->attribute.data.value);
     if(!res){
         ESP_LOGW(ZB_TAG, "No callback for endpoint(%d), cluster(0x%x), attribute(0x%x)",

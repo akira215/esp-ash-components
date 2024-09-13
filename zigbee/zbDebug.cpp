@@ -102,7 +102,7 @@ void printClusterList(esp_zb_cluster_list_t* clusterList)
 
 ///////////////////////////////////// Address ///////////////////////////
 
-std::string addr2string(esp_zb_ieee_addr_t addr )
+std::string addr2string(const esp_zb_ieee_addr_t addr )
 {
 
     std::string str;
@@ -132,14 +132,14 @@ void print_binding_table_cb(const esp_zb_zdo_binding_table_info_t *record, void 
 		return;
 	}
 
-    std::cout << +(record->index) << " / " << +(record->total) << 
+    std::cout << "@ " << (void*)(record->record) << " : " << +(record->index) << " / " << +(record->total) << 
             " [" << +(record->count) << "," << +(record->status) << "]: " <<
             addr2string(record->record->src_address) << " | EP: " << 
             +(record->record->src_endp) << " | Cluster: " << +(record->record->cluster_id) << " -> " <<
             (record->record->dst_addr_mode == ESP_ZB_ZDO_BIND_DST_ADDR_MODE_16_BIT_GROUP
 			? std::to_string(record->record->dst_address.addr_short)
 			: addr2string(record->record->dst_address.addr_long)) << " | EP: " <<
-            +(record->record->dst_endp) <<
+            +(record->record->dst_endp) << " @next: " << record->record->next <<
             std::endl;
 
 	/*if (record->index + 1 < record->total) {
@@ -160,10 +160,33 @@ void print_binding_table_next(uint8_t index) {
 }
 
 
-void print_binding_table() {
+void print_binding_table(const esp_zb_zdo_binding_table_record_t *record) {
+
+    if (!record) {
+        std::cout << "Binding table nullptr" << std::endl;
+		return;
+	}
+
     std::cout << " =============== Binding table ===============" <<  std::endl;
-	print_binding_table_next(0);
+    std::cout << " Src addr | src endp | cluster -> Dst addr | dst endp" <<  std::endl;
+
+
+    while(record){
+        std::cout << "@: " << (void*)(record) << " " << addr2string(record->src_address) << " | " << 
+            +(record->src_endp) << " | " << +(record->cluster_id) << " -> " <<
+            (record->dst_addr_mode == ESP_ZB_ZDO_BIND_DST_ADDR_MODE_16_BIT_GROUP
+			? std::to_string(record->dst_address.addr_short)
+			: addr2string(record->dst_address.addr_long)) << " | " <<
+            +(record->dst_endp) << " @next: " << record->next << 
+            std::endl;
+        
+        record = record->next;
+    }
+
+	//print_binding_table_next(0);
 
 }
+
+
 
 } // namespace ZbDebug

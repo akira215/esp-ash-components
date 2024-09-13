@@ -6,7 +6,7 @@
 
   Zigbee End Point Class
 */
-
+#include "zbEndpoint.h"
 #include "zbCluster.h"
 
 #include <iostream> // TODEL
@@ -105,4 +105,31 @@ bool ZbCluster::setAttribute(uint16_t attr_id, void* value)
         return true;
     }
     return false;
+}
+
+void ZbCluster::setEndPoint(ZbEndPoint* parent)
+{
+    _endPoint = parent;
+}
+
+uint8_t ZbCluster::sendCommand(uint16_t cmd)
+{
+    if(!_endPoint)
+        return 0;
+
+    esp_zb_zcl_custom_cluster_cmd_req_t cmd_req;
+    uint8_t ret;
+
+    cmd_req.zcl_basic_cmd.src_endpoint = _endPoint->getId();
+    cmd_req.address_mode = ESP_ZB_APS_ADDR_MODE_DST_ADDR_ENDP_NOT_PRESENT;
+    cmd_req.profile_id = ESP_ZB_AF_HA_PROFILE_ID;
+    cmd_req.cluster_id = getId();
+    cmd_req.custom_cmd_id = cmd;
+    cmd_req.direction = isClient() ? ESP_ZB_ZCL_CMD_DIRECTION_TO_SRV : ESP_ZB_ZCL_CMD_DIRECTION_TO_CLI;
+
+    esp_zb_lock_acquire(portMAX_DELAY); 
+    ret = esp_zb_zcl_custom_cluster_cmd_req(&cmd_req);
+    esp_zb_lock_release();
+
+    return ret;
 }
