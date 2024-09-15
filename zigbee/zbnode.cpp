@@ -401,18 +401,30 @@ esp_err_t ZbNode::handlingCmdDefaultResp(const esp_zb_zcl_cmd_default_resp_messa
 esp_err_t ZbNode::handlingCmdSetAttribute(const esp_zb_zcl_set_attr_value_message_t *msg)
 {
     
-    ESP_RETURN_ON_FALSE(msg, ESP_FAIL, ZB_TAG, "Empty message");
+    ESP_RETURN_ON_FALSE(msg, ESP_FAIL, ZB_TAG, "Set Attr - Empty message");
     ESP_RETURN_ON_FALSE(msg->info.status == ESP_ZB_ZCL_STATUS_SUCCESS, ESP_ERR_INVALID_ARG, 
                         ZB_TAG, "Set Attribute received message: error status(%d)",
                         msg->info.status);
     ESP_LOGD(ZB_TAG, "Received set attr message: endpoint(%d), cluster(0x%x), attribute(0x%x), data size(%d)", 
             msg->info.dst_endpoint, msg->info.cluster,
             msg->attribute.id, msg->attribute.data.size);
-    
-    bool res = _endPointMap[msg->info.dst_endpoint]->getCluster(msg->info.cluster, false)->
-                        setAttribute(msg->attribute.id, msg->attribute.data.value);
+
+    auto it = _endPointMap.find(msg->info.dst_endpoint);
+    if (it == _endPointMap.end()){
+         ESP_LOGW(ZB_TAG, "Set Attr - No endpoint %d found", msg->info.dst_endpoint);
+         return ESP_ERR_NOT_FOUND;
+    }
+
+    ZbCluster* cluster = it->second->getCluster(msg->info.cluster, false);
+    if (!cluster){
+        ESP_LOGW(ZB_TAG, "Set Attr - No cluster %d found for endpoint %d", 
+                        msg->info.cluster, msg->info.dst_endpoint);
+        return ESP_ERR_NOT_FOUND;
+    }
+
+    bool res = cluster->setAttribute(msg->attribute.id, msg->attribute.data.value);
     if(!res){
-        ESP_LOGW(ZB_TAG, "No callback for endpoint(%d), cluster(0x%x), attribute(0x%x)",
+        ESP_LOGW(ZB_TAG, "Set Attr - No callback for endpoint(%d), cluster(0x%x), attribute(0x%x)",
                 msg->info.dst_endpoint, msg->info.cluster,
                 msg->attribute.id);
         return ESP_ERR_NOT_FOUND;
@@ -451,3 +463,25 @@ esp_err_t ZbNode::handleZbActions(esp_zb_core_action_callback_id_t callback_id,
     }
     return ret;
 }
+
+///////////////////////////////////////////////////////////////////////////////////////////
+esp_err_t ZbNode::sendCommand(uint8_t endp, uint16_t cluster_id, bool isClient,uint16_t cmd)
+{
+    auto it = _endPointMap.find(endp);
+    if (it == _endPointMap.end()){
+         ESP_LOGW(ZB_TAG, "Send command - No endpoint %d found", endp);
+         return ESP_ERR_NOT_FOUND;
+    }
+
+    ZbCluster* cluster = it->second->getCluster(cluster_id, isClient);
+    if (!cluster){
+        ESP_LOGW(ZB_TAG, "Send command - No cluster %d found for endpoint %d", 
+                        endp, cluster_id);
+        return ESP_ERR_NOT_FOUND;
+    }
+
+    cluster->sendCommand(cmd);
+
+    return ESP_OK;   
+}
+////////////////////////////////////////////////////////////////////////////////////////////////

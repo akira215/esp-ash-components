@@ -124,8 +124,16 @@ void ZbEndPoint::addCluster(ZbCluster* cluster)
 
 ZbCluster* ZbEndPoint::getCluster(uint16_t id, bool isClient)
 {
-    if (isClient)
-        return _clientClusterMap[id];
+    if (isClient){
+        auto it = _clientClusterMap.find(id);
+        if (it == _clientClusterMap.end())
+            return nullptr;
+        return it->second;
+    }
 
-    return _serverClusterMap[id];
+    auto it = _serverClusterMap.find(id);
+    if (it == _serverClusterMap.end())
+        return nullptr;
+    
+    return it->second;
 }

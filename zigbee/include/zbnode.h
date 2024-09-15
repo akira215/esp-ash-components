@@ -108,14 +108,16 @@ public:
     /// @brief retrive a pointer to the endpoint from the endpoint id
     ZbEndPoint* getEndPoint(uint8_t endp_id);
 
-     /// @brief Handle zb actions
+    /// @brief Handle zb actions
     esp_err_t handleZbActions(esp_zb_core_action_callback_id_t callback_id, 
                     const void *message);
 
     void bindAttribute(uint8_t endpoint);
     static void bind_cb(esp_zb_zdp_status_t zdo_status, void *user_ctx);
-
-
+    
+    /// @brief Send command
+    esp_err_t sendCommand(uint8_t endp, uint16_t cluster_id, 
+                    bool isClient,uint16_t cmd);
 protected:
     
     static void zbTask(void *pvParameters);
