@@ -7,5 +7,13 @@ menu "Zigbee Device"
         help
             GPIO number for Led that Zigbee device will use as UI.
             If defined to GPIO_NUM_NC = -1, no led will be used
+    
+    config ZB_STACK_DEPTH
+        int "Stack depth for Zigbee task"
+        range 2048 8192
+        default 4096
+        help
+            Use uxTaskGetStackHighWaterMark(ZbNode::getInstance()->getZbTask())
+            to check remaining available stack.
 
 endmenu

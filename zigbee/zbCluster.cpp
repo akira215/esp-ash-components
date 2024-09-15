@@ -114,8 +114,6 @@ void ZbCluster::setEndPoint(ZbEndPoint* parent)
 
 uint8_t ZbCluster::sendCommand(uint16_t cmd)
 {
-    std::cout<<"send cmd "<<cmd <<std::endl;
-    
     if(!_endPoint)
         return 0;
 

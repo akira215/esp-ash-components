@@ -24,7 +24,7 @@
 #endif
 
 #define INSTALLCODE_POLICY_ENABLE       false   /* enable the install code policy for security */
-#define ED_MAX_CHILDREN 10
+#define ED_MAX_CHILDREN                 10
 #define ED_AGING_TIMEOUT                ESP_ZB_ED_AGING_TIMEOUT_64MIN
 #define ED_KEEP_ALIVE                   3000    /* 3000 millisecond */
 
@@ -34,15 +34,6 @@
     #define ZB_DEVICE_TYPE = ESP_ZB_DEVICE_TYPE_ROUTER
 #endif
 
-#define ESP_ZB_DEFAULT_RADIO_CONFIG()                           \
-    {                                                           \
-        .radio_mode = ZB_RADIO_MODE_NATIVE,                     \
-    }
-
-#define ESP_ZB_DEFAULT_HOST_CONFIG()                            \
-    {                                                           \
-        .host_connection_mode = ZB_HOST_CONNECTION_MODE_NONE,   \
-    }
 
 class ZbNode
 {
@@ -115,7 +106,12 @@ public:
     void bindAttribute(uint8_t endpoint);
     static void bind_cb(esp_zb_zdp_status_t zdo_status, void *user_ctx);
     
-    /// @brief Send command
+    /// @brief send command. Note that no check is done on the cmd itself
+    /// @param endp endpoint that send the command
+    /// @param cluster_id id of the cluster
+    /// @param isClient if the cluster is Client or Server
+    /// @param cmd command to be sent
+    /// @return ESP_ERR_NOT_FOUND if endp or cluster doesn't exist otherwise ESP_OK
     esp_err_t sendCommand(uint8_t endp, uint16_t cluster_id, 
                     bool isClient,uint16_t cmd);
 protected:
@@ -142,10 +138,6 @@ protected:
 private:
     /// @brief Constructor is private (singleton)
     ZbNode();
-    void _initNetwork();
-    void _initEndPointList();
-
-
 
 };
 

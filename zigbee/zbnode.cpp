@@ -64,14 +64,6 @@ static esp_err_t zb_action_handler(esp_zb_core_action_callback_id_t callback_id,
     return ZbNode::getInstance()->handleZbActions(callback_id, message);               
 }
 
-static bool zb_raw_command_handler(uint8_t bufid)
-{
-    ESP_LOGI(ZB_TAG, "Raw command handler %d", bufid);
-    //If the bufid has been processed in the callback, it should be freed using the zb_zcl_send_default_handler().
-
-    return false;
-}
-
 ZbNode* ZbNode::getInstance()
 {
    static ZbNode instance;
@@ -81,15 +73,23 @@ ZbNode* ZbNode::getInstance()
 ZbNode::ZbNode()
 { 
     esp_zb_platform_config_t config;
-    config.radio_config = ESP_ZB_DEFAULT_RADIO_CONFIG();
-    config.host_config = ESP_ZB_DEFAULT_HOST_CONFIG();
+    config.radio_config.radio_mode = ZB_RADIO_MODE_NATIVE;
+    config.host_config.host_connection_mode = ZB_HOST_CONNECTION_MODE_NONE;
     
     ESP_ERROR_CHECK(nvs_flash_init());
     ESP_ERROR_CHECK(esp_zb_platform_config(&config));
 
-    _initNetwork();  // TODO move in constructor if require
+    // Initialize Network 
+    esp_zb_cfg_t zb_nwk_cfg;
+    zb_nwk_cfg.esp_zb_role = ZB_DEVICE_TYPE;
+    zb_nwk_cfg.install_code_policy = INSTALLCODE_POLICY_ENABLE;
+    zb_nwk_cfg.nwk_cfg.zczr_cfg.max_children = ED_MAX_CHILDREN;
+    zb_nwk_cfg.nwk_cfg.zed_cfg.ed_timeout = ED_AGING_TIMEOUT;
+    zb_nwk_cfg.nwk_cfg.zed_cfg.keep_alive = ED_KEEP_ALIVE;
 
-    _initEndPointList();
+    esp_zb_init(&zb_nwk_cfg);
+
+    _ep_list = esp_zb_ep_list_create();
 
 }
 
@@ -123,26 +123,6 @@ void ZbNode::ledFlash(uint64_t speed)
     }
     #endif
 
-}
-
-void ZbNode::_initNetwork()
-{
-    // This is in xTaskCreate
-    /* Initialize Zigbee stack */
-    esp_zb_cfg_t zb_nwk_cfg;
-    zb_nwk_cfg.esp_zb_role = ZB_DEVICE_TYPE;
-    zb_nwk_cfg.install_code_policy = INSTALLCODE_POLICY_ENABLE;
-    zb_nwk_cfg.nwk_cfg.zczr_cfg.max_children = ED_MAX_CHILDREN;
-    zb_nwk_cfg.nwk_cfg.zed_cfg.ed_timeout = ED_AGING_TIMEOUT;
-    zb_nwk_cfg.nwk_cfg.zed_cfg.keep_alive = ED_KEEP_ALIVE;
-
-    esp_zb_init(&zb_nwk_cfg);
-
-}
-
-void ZbNode::_initEndPointList()
-{
-    _ep_list = esp_zb_ep_list_create();
 }
 
 bool ZbNode::isJoined()
@@ -314,12 +294,8 @@ void ZbNode::start()
     //Register the device 
     esp_zb_device_register(_ep_list);
     esp_zb_core_action_handler_register(zb_action_handler);
-  //  esp_zb_aps_data_indication_handler_register(zb_apsde_data_indication_handler);
-   // esp_zb_aps_data_confirm_handler_register(zb_aps_data_confirm_handler);
-    //esp_zb_raw_command_handler_register(zb_raw_command_handler);
-
     //xTaskCreate(zbTask, "Zigbee_Device", 4096, NULL, 5, NULL);
-    xTaskCreate(zbTask, "Zigbee_Device", 8192, NULL, 5, &_zbTask);
+    xTaskCreate(zbTask, "Zigbee_Device", CONFIG_ZB_STACK_DEPTH, NULL, 5, &_zbTask);
 }
 
 void ZbNode::zbTask(void *pvParameters)
@@ -383,7 +359,7 @@ static esp_err_t zb_attribute_reporting_handler(const esp_zb_zcl_report_attr_mes
     return ESP_OK;
 }
 
-//// TODO include in class !
+
 esp_err_t ZbNode::handlingCmdDefaultResp(const esp_zb_zcl_cmd_default_resp_message_t *msg)
 {
     ESP_RETURN_ON_FALSE(msg, ESP_FAIL, ZB_TAG, "Empty message");
