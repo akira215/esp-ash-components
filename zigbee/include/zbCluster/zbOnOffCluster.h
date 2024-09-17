@@ -19,7 +19,7 @@ public:
                     ) 
     {
         esp_zb_on_off_cluster_cfg_t cfg;
-        cfg.on_off  = on_off;                                                                    
+        cfg.on_off = on_off;                                                                    
         _attr_list = esp_zb_on_off_cluster_create(&cfg);
 
         _init(ESP_ZB_ZCL_CLUSTER_ID_ON_OFF, isClient);

@@ -65,8 +65,11 @@ public:
 
     void setCallback(clusterCb callback);
 
+    bool attributeWasSet(uint16_t attr_id, void* value);
     bool setAttribute(uint16_t attr_id, void* value);
     uint8_t sendCommand(uint16_t cmd); // TODO add data
+
+    void setReporting(uint16_t attr_id);
 
 private:
 

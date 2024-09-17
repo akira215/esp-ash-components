@@ -29,7 +29,7 @@ ZbCluster::~ZbCluster()
 void ZbCluster::_init(uint16_t id, bool isClient){
     _cluster.cluster_id = id;
     _cluster.attr_count = 0;
-    //_cluster.attr_list = &_attrList.back();
+ 
     _cluster.attr_list = _attr_list;
     isClient ? _cluster.role_mask = ESP_ZB_ZCL_CLUSTER_CLIENT_ROLE :
                 _cluster.role_mask = ESP_ZB_ZCL_CLUSTER_SERVER_ROLE;
@@ -98,13 +98,28 @@ void ZbCluster::setCallback(clusterCb callback)
     _callback = callback;
 }
 
-bool ZbCluster::setAttribute(uint16_t attr_id, void* value)
+bool ZbCluster::attributeWasSet(uint16_t attr_id, void* value)
 {
     if(_callback){
         _callback(attr_id, value);
         return true;
     }
     return false;
+}
+
+bool ZbCluster::setAttribute(uint16_t attr_id, void* value)
+{
+    esp_zb_lock_acquire(portMAX_DELAY);
+
+    esp_zb_zcl_status_t res = esp_zb_zcl_set_attribute_val(_endPoint->getId(),
+                 getId(), 
+                 isClient() ? ESP_ZB_ZCL_CLUSTER_CLIENT_ROLE : ESP_ZB_ZCL_CLUSTER_SERVER_ROLE, 
+                 attr_id, 
+                 value, 
+                 false);
+    esp_zb_lock_release();
+
+    return res == ESP_ZB_ZCL_STATUS_SUCCESS; 
 }
 
 void ZbCluster::setEndPoint(ZbEndPoint* parent)
@@ -125,11 +140,51 @@ uint8_t ZbCluster::sendCommand(uint16_t cmd)
     cmd_req.profile_id = ESP_ZB_AF_HA_PROFILE_ID;
     cmd_req.cluster_id = getId();
     cmd_req.custom_cmd_id = cmd;
-    cmd_req.direction = isClient() ? ESP_ZB_ZCL_CMD_DIRECTION_TO_SRV : ESP_ZB_ZCL_CMD_DIRECTION_TO_CLI;
+    cmd_req.direction = isClient() ? ESP_ZB_ZCL_CMD_DIRECTION_TO_SRV : 
+                                    ESP_ZB_ZCL_CMD_DIRECTION_TO_CLI;
 
     esp_zb_lock_acquire(portMAX_DELAY); 
     ret = esp_zb_zcl_custom_cluster_cmd_req(&cmd_req);
     esp_zb_lock_release();
 
     return ret;
+}
+
+void ZbCluster::setReporting(uint16_t attr_id)
+{
+//uint8_t esp_zb_zcl_config_report_cmd_req(esp_zb_zcl_config_report_cmd_t *cmd_req)
+//esp_zb_zcl_reporting_info_t *esp_zb_zcl_find_reporting_info(esp_zb_zcl_attr_location_info_t attr_info);
+    esp_zb_zcl_config_report_cmd_t report;
+
+    report.address_mode = ESP_ZB_APS_ADDR_MODE_DST_ADDR_ENDP_NOT_PRESENT;
+    report.clusterID = getId();
+    
+
+
+    uint8_t esp_zb_zcl_config_report_cmd_req(esp_zb_zcl_config_report_cmd_t *cmd_req)
+
+
+    
+    // Config the reporting info
+    /*
+    esp_zb_zcl_reporting_info_t reporting_info;
+    reporting_info.direction = ESP_ZB_ZCL_REPORT_DIRECTION_SEND;
+    reporting_info.ep = _endPoint->getId();
+    reporting_info.cluster_id = getId();
+    reporting_info.cluster_role = isClient() ?  ESP_ZB_ZCL_CLUSTER_CLIENT_ROLE :
+                                                ESP_ZB_ZCL_CLUSTER_SERVER_ROLE;
+    reporting_info.attr_id = attr_id;
+    
+    reporting_info.u.send_info.min_interval = 1;
+    reporting_info.u.send_info.max_interval = 670;
+    reporting_info.u.send_info.def_min_interval = 1;
+    reporting_info.u.send_info.def_max_interval = 960;
+    reporting_info.u.send_info.delta.u16 = 100;
+    
+    reporting_info.dst.profile_id = ESP_ZB_AF_HA_PROFILE_ID;
+    reporting_info.manuf_code = ESP_ZB_ZCL_ATTR_NON_MANUFACTURER_SPECIFIC;
+
+    esp_zb_zcl_update_reporting_info(&reporting_info);   
+*/
+    //esp_zb_zcl_config_report_cmd_req();
 }

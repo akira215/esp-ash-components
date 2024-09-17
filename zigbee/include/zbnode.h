@@ -37,19 +37,17 @@
 
 class ZbNode
 {
-    static std::map<uint8_t,ZbEndPoint*>   _endPointMap;
-    //static std::list<ZbCluster>     _clusterList;
-    static esp_zb_ep_list_t*        _ep_list;
+    static std::map<uint8_t,ZbEndPoint*>    _endPointMap;
+    static esp_zb_ep_list_t*                _ep_list;
 
-    static TaskHandle_t             _zbTask;
+    static TaskHandle_t                     _zbTask;
 
     #ifdef ZB_USE_LED
-    static BlinkTask*   _ledBlinking;
-    static GpioOutput   _led;
+    static BlinkTask*                       _ledBlinking;
+    static GpioOutput                       _led;
     #endif
 public:
   
-    //ZbNode();
     ~ZbNode();
 
     //Singletons should not be cloneable.
@@ -79,8 +77,6 @@ public:
     /// all related infos including the nvs will be deleted
     static void leaveNetwork();
 
-    //void _init();
-
     /// @brief Test if the device is currently connected to network
     /// @return true if device is connected to a network
     static bool isJoined();
@@ -92,11 +88,13 @@ public:
     /// @return NULL if no task created otherwise the handle
     static TaskHandle_t getZbTask() { return _zbTask; }
 
-
     /// @brief add the endpoint to the Node
+    /// @param ep endpoint to be added
     void addEndPoint(ZbEndPoint& ep);
 
     /// @brief retrive a pointer to the endpoint from the endpoint id
+    /// @param endp_id id of the endpoint
+    /// @return a pointer to the endpoint if exists, otherwise nullptr
     ZbEndPoint* getEndPoint(uint8_t endp_id);
 
     /// @brief Handle zb actions
@@ -104,6 +102,7 @@ public:
                     const void *message);
 
     void bindAttribute(uint8_t endpoint);
+    
     static void bind_cb(esp_zb_zdp_status_t zdo_status, void *user_ctx);
     
     /// @brief send command. Note that no check is done on the cmd itself
@@ -114,6 +113,15 @@ public:
     /// @return ESP_ERR_NOT_FOUND if endp or cluster doesn't exist otherwise ESP_OK
     esp_err_t sendCommand(uint8_t endp, uint16_t cluster_id, 
                     bool isClient,uint16_t cmd);
+    
+    /// @brief set attribute. Note that this is not required if device is bound
+    /// @param endp endpoint that send the command
+    /// @param cluster_id id of the cluster
+    /// @param isClient if the cluster is Client or Server
+    /// @param cmd command to be sent
+    /// @return ESP_ERR_NOT_FOUND if endp or cluster doesn't exist otherwise ESP_OK
+    esp_err_t setAttribute(uint8_t endp, uint16_t cluster_id, 
+                    bool isClient,uint16_t attrId, void* value);
 protected:
     
     static void zbTask(void *pvParameters);

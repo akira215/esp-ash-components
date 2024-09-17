@@ -36,7 +36,6 @@
 TaskHandle_t ZbNode::_zbTask = NULL;
 esp_zb_ep_list_t* ZbNode::_ep_list = nullptr;
 std::map<uint8_t,ZbEndPoint*> ZbNode::_endPointMap = {};
-//std::list<ZbCluster>  ZbNode::_clusterList = {};
 
 #ifdef ZB_USE_LED
 BlinkTask* ZbNode::_ledBlinking = nullptr;
@@ -95,8 +94,7 @@ ZbNode::ZbNode()
 
 ZbNode::~ZbNode()
 {
-   
-
+    //TODO del all ZbEndPoint objects
 }
 
 void ZbNode::ledFlash(uint64_t speed)
@@ -300,25 +298,6 @@ void ZbNode::start()
 
 void ZbNode::zbTask(void *pvParameters)
 {
-/*
-    // Config the reporting info  
-    esp_zb_zcl_reporting_info_t reporting_info;
-    reporting_info.direction = ESP_ZB_ZCL_CMD_DIRECTION_TO_SRV;
-    reporting_info.ep = 10;
-    reporting_info.cluster_id = ESP_ZB_ZCL_CLUSTER_ID_TEMP_MEASUREMENT;
-    reporting_info.cluster_role = ESP_ZB_ZCL_CLUSTER_SERVER_ROLE;
-    reporting_info.dst.profile_id = ESP_ZB_AF_HA_PROFILE_ID;
-    reporting_info.u.send_info.min_interval = 1;
-    reporting_info.u.send_info.max_interval = 670;
-    reporting_info.u.send_info.def_min_interval = 1;
-    reporting_info.u.send_info.def_max_interval = 960;
-    reporting_info.u.send_info.delta.u16 = 100;
-    reporting_info.attr_id = ESP_ZB_ZCL_ATTR_TEMP_MEASUREMENT_VALUE_ID;
-    reporting_info.manuf_code = ESP_ZB_ZCL_ATTR_NON_MANUFACTURER_SPECIFIC;
-
-    esp_zb_zcl_update_reporting_info(&reporting_info);   
-*/
-    //esp_zb_zcl_config_report_cmd_req();
 
     esp_zb_set_primary_network_channel_set(ESP_ZB_TRANSCEIVER_ALL_CHANNELS_MASK); //TODO evaluate this macro
     //esp_zb_set_secondary_network_channel_set(ESP_ZB_SECONDARY_CHANNEL_MASK);
@@ -341,8 +320,14 @@ void ZbNode::addEndPoint(ZbEndPoint& ep)
                         _endPointMap[EpId]->getConfig());
 }
 
-ZbEndPoint* ZbNode::getEndPoint(uint8_t endp_id){
-    return _endPointMap[endp_id];
+ZbEndPoint* ZbNode::getEndPoint(uint8_t endp_id)
+{
+    auto it = _endPointMap.find(endp_id);
+    if (it == _endPointMap.end()){
+         ESP_LOGW(ZB_TAG, "getEndPoint - No endpoint %d found", endp_id);
+         return nullptr;
+    }
+    return it->second;
 }
 
 /*---------------------------------------------------------------------------------------------*/
@@ -398,7 +383,7 @@ esp_err_t ZbNode::handlingCmdSetAttribute(const esp_zb_zcl_set_attr_value_messag
         return ESP_ERR_NOT_FOUND;
     }
 
-    bool res = cluster->setAttribute(msg->attribute.id, msg->attribute.data.value);
+    bool res = cluster->attributeWasSet(msg->attribute.id, msg->attribute.data.value);
     if(!res){
         ESP_LOGW(ZB_TAG, "Set Attr - No callback for endpoint(%d), cluster(0x%x), attribute(0x%x)",
                 msg->info.dst_endpoint, msg->info.cluster,
@@ -441,7 +426,7 @@ esp_err_t ZbNode::handleZbActions(esp_zb_core_action_callback_id_t callback_id,
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////
-esp_err_t ZbNode::sendCommand(uint8_t endp, uint16_t cluster_id, bool isClient,uint16_t cmd)
+esp_err_t ZbNode::sendCommand(uint8_t endp, uint16_t cluster_id, bool isClient, uint16_t cmd)
 {
     auto it = _endPointMap.find(endp);
     if (it == _endPointMap.end()){
@@ -460,4 +445,26 @@ esp_err_t ZbNode::sendCommand(uint8_t endp, uint16_t cluster_id, bool isClient,u
 
     return ESP_OK;   
 }
+
+esp_err_t ZbNode::setAttribute(uint8_t endp, uint16_t cluster_id, bool isClient, uint16_t attrId, void* value)
+{
+    auto it = _endPointMap.find(endp);
+    if (it == _endPointMap.end()){
+         ESP_LOGW(ZB_TAG, "Set Attr - No endpoint %d found", endp);
+         return ESP_ERR_NOT_FOUND;
+    }
+
+    ZbCluster* cluster = it->second->getCluster(cluster_id, isClient);
+    if (!cluster){
+        ESP_LOGW(ZB_TAG, "Set Attr - No cluster %d found for endpoint %d", 
+                        endp, cluster_id);
+        return ESP_ERR_NOT_FOUND;
+    }
+
+    /////cluster->set;
+
+    return ESP_OK;   
+}
+
+
 ////////////////////////////////////////////////////////////////////////////////////////////////
