@@ -161,7 +161,7 @@ void ZbCluster::setReporting(uint16_t attr_id)
     
 
 
-    uint8_t esp_zb_zcl_config_report_cmd_req(esp_zb_zcl_config_report_cmd_t *cmd_req)
+    uint8_t esp_zb_zcl_config_report_cmd_req(esp_zb_zcl_config_report_cmd_t *cmd_req);
 
 
     
