@@ -30,8 +30,7 @@ could be reported to try to improve it.
 ```h
 #pragma once
 
-#include "persistedValue.h" // to del
-
+#include "persistedValue.h" 
 
 #define HA_ESP_SENSOR_ENDPOINT          10      /* esp temperature sensor device endpoint, used for temperature measurement */
 // Main class used for testing only
@@ -43,8 +42,6 @@ public:
     void setup(void);
 private:
     PersistedValue<int8_t> testNVM;
-
-    //ZbEndPoint _zbBasicEndpoint;
 
 }; // Main Class
 ```

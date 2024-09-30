@@ -110,7 +110,9 @@ void Main::setup(void)
 
     // System Event Loop
     esp_event_loop_create_default();    // Create System Event Loop
-    cppButton.setEventHandler(&button_event_handler);
+    // Get a pointer of pointer to retrieve the instance in the event
+    Main** ptr = new Main*(this);
+    cppButton.setEventHandler(&button_event_handler, ptr);
 
     // Custom event loop
     esp_event_loop_args_t gpio_loop_args;
@@ -133,6 +135,8 @@ void Main::setup(void)
 
 void Main::button_event_handler(void *handler_args, esp_event_base_t base, int32_t id, void *event_data)
 {
+    Main* instance = *(static_cast<Main**>(event_data));
+    instance->cppLed.toggle();
     std::cout << "Button triggered interrupt with ID: " << id << '\n';
 }
 

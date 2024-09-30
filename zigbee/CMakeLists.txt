@@ -6,5 +6,7 @@ set(SOURCES zbNode.cpp
             
 idf_component_register(SRCS ${SOURCES}
                     INCLUDE_DIRS include include/zbCluster
-                    REQUIRES driver nvs_flash esp-zigbee-lib periodicTask)
+                    REQUIRES driver nvs_flash ieee802154 esp-zigbee-lib 
+                    nvs_flash partition_table
+                    periodicTask)
 #driver is required for zigbee stack
