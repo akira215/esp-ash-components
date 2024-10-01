@@ -10,8 +10,13 @@
 #include "zbCluster.h"
 
 #include <iostream> // TODEL
+#include <esp_log.h> // TODEL
+#include "esp_err.h"
 
+static const char *ZCL_TAG = "ZCL_CPP";
 
+// Event source ZCL related definitions
+ESP_EVENT_DEFINE_BASE(ZCL_EVENTS);
 
 ZbCluster::ZbCluster()
 {
@@ -23,7 +28,7 @@ ZbCluster::~ZbCluster()
     // Destructor seems useless as the doc says:
     // After successful registration, the SDK will retain a copy of the whole data model, 
     // the ep_list will be freed.
-    
+    //esp_event_handler_unregister();
 }
 
 void ZbCluster::_init(uint16_t id, bool isClient){
@@ -35,7 +40,7 @@ void ZbCluster::_init(uint16_t id, bool isClient){
                 _cluster.role_mask = ESP_ZB_ZCL_CLUSTER_SERVER_ROLE;
     _cluster.manuf_code = 0; // TODO check
     _cluster.cluster_init = nullptr;//esp_zb_zcl_cluster_init_t cluster init callback
-    
+           
 }
 
 void ZbCluster::_copyAttributes(const ZbCluster& other)
@@ -125,6 +130,10 @@ bool ZbCluster::setAttribute(uint16_t attr_id, void* value)
 void ZbCluster::setEndPoint(ZbEndPoint* parent)
 {
     _endPoint = parent;
+    /*
+    ESP_LOGW(ZCL_TAG, "Cluster id(%x), endpointId (%x), isClient (%d) => event Id 32bits %lx",
+                    getId(), _endPoint->getId(), isClient(), getEventId() );
+    */
 }
 
 uint8_t ZbCluster::sendCommand(uint16_t cmd)
@@ -148,6 +157,83 @@ uint8_t ZbCluster::sendCommand(uint16_t cmd)
     esp_zb_lock_release();
 
     return ret;
+}
+
+uint8_t ZbCluster::readAttribute(uint16_t attrId, uint8_t dst_endpoint, uint16_t short_addr)
+{
+    esp_zb_zcl_read_attr_cmd_t cmd_req;
+    uint8_t ret;
+
+    cmd_req.zcl_basic_cmd.dst_addr_u.addr_short = short_addr;
+    cmd_req.zcl_basic_cmd.dst_endpoint = dst_endpoint;
+    cmd_req.zcl_basic_cmd.src_endpoint = _endPoint->getId();
+
+    cmd_req.address_mode = ESP_ZB_APS_ADDR_MODE_16_ENDP_PRESENT;
+    
+    cmd_req.clusterID = getId();
+    //TODO implement multiple attr reading
+    /*
+    uint16_t attributes[] = {ESP_ZB_ZCL_ATTR_ON_OFF_ON_OFF_ID};
+    cmd_req.attr_number = sizeof(attributes) / sizeof(uint16_t);;
+    cmd_req.attr_field = attributes;
+    */
+    cmd_req.attr_number = 1;
+    cmd_req.attr_field = &attrId;
+
+    esp_zb_lock_acquire(portMAX_DELAY);                                               
+	ret = esp_zb_zcl_read_attr_cmd_req( &cmd_req);
+    esp_zb_lock_release();
+
+    return ret;
+
+}
+
+esp_err_t ZbCluster::attributesWereRead(esp_zb_zcl_read_attr_resp_variable_t* attrs)
+{
+    esp_zb_zcl_attr_t* local_attr = nullptr;
+    while (attrs){
+        if(attrs->status == ESP_ZB_ZCL_STATUS_SUCCESS)
+        {
+            // look up if the attribute exist in this cluster
+            local_attr = esp_zb_zcl_get_attribute(_endPoint->getId(), 
+                                getId(),
+                                isClient() ? ESP_ZB_ZCL_CLUSTER_CLIENT_ROLE : ESP_ZB_ZCL_CLUSTER_SERVER_ROLE,
+                                attrs->attribute.id );
+            if(local_attr){
+                if(local_attr->type == attrs->attribute.data.type){
+                    //everything is fine, setup the value locally
+                    esp_zb_zcl_status_t ret = esp_zb_zcl_set_attribute_val(_endPoint->getId(),
+                                getId(),
+                                isClient() ? ESP_ZB_ZCL_CLUSTER_CLIENT_ROLE : ESP_ZB_ZCL_CLUSTER_SERVER_ROLE, 
+                                local_attr->id, 
+                                attrs->attribute.data.value, 
+                                false);
+                    if(ret != ESP_ZB_ZCL_STATUS_SUCCESS)
+                        ESP_LOGW(ZCL_TAG, "Endpoint (%d), Cluster (%d), read attr id (%d) error setting local value (%x)",
+                        _endPoint->getId(), getId(), attrs->attribute.id, ret);
+                    else {
+                        eventArgs args;
+                        args.attribute_id = local_attr->id;
+                        args.event =  ATTR_UPDATED_AFTER_READ;
+                        esp_event_post(ZCL_EVENTS, getEventId(),
+                                        &args, sizeof(eventArgs), portMAX_DELAY);
+                    }
+                } else { // Read attribute type is not the same as cluster attr type
+                    ESP_LOGW(ZCL_TAG, "Endpoint (%d), Cluster (%d), read attr id (%d) is type (%x) as local type is (%x)",
+                        _endPoint->getId(), getId(), attrs->attribute.id, attrs->attribute.data.type, local_attr->type );
+                }
+            } else {  // attr don't exist
+                ESP_LOGW(ZCL_TAG, "Endpoint (%d), Cluster (%d), read attr id (%d): attr doesn't locally exist",
+                        _endPoint->getId(), getId(), attrs->attribute.id);
+            }
+        } else {
+            ESP_LOGW(ZCL_TAG, "Endpoint (%d), Cluster (%d), read attr id (%d): error status(%d)",
+                        _endPoint->getId(), getId(), attrs->attribute.id, attrs->status);
+        }
+        attrs = attrs->next;
+    }
+
+    return ESP_OK;
 }
 
 void ZbCluster::setReporting(uint16_t attr_id)
@@ -187,4 +273,14 @@ void ZbCluster::setReporting(uint16_t attr_id)
     esp_zb_zcl_update_reporting_info(&reporting_info);   
 */
     //esp_zb_zcl_config_report_cmd_req();
+}
+
+int32_t ZbCluster::getEventId()
+{
+    eventId_t e;
+    e.src.isClient = (uint8_t)isClient();
+    e.src.clusterId = getId();
+    e.src.endpointId = _endPoint->getId();
+
+    return e.id;
 }

@@ -12,23 +12,57 @@
 #include <memory>
 #include <cstring>
 #include <string>
-
+#include "esp_event.h"
 #include "esp_zigbee_core.h"
 
 
 #include <iostream> // TODEL
 class ZbEndPoint;
 
+
+// Declare an event base
+ESP_EVENT_DECLARE_BASE(ZCL_EVENTS);         // declaration of the ZCL events family
+
+
+
 class ZbCluster
 {
+    typedef union __attribute__((packed)) {
+        struct {
+            uint16_t    clusterId:16;
+            uint8_t     endpointId:8;
+            uint8_t     isClient:8;
+        } src;
+        int32_t id;
+    } eventId_t;
+
+    typedef enum {
+        ATTR_UPDATED_AFTER_READ    = 0x00,
+        ATTR_UPDATED_REMOTELY
+    } eventType;
+
+
+    typedef struct {   
+        uint16_t    attribute_id;
+        eventType   event;
+    } eventArgs;
+
+    /// @brief cluster callback type
     typedef void (*clusterCb)(uint16_t attrId, void* value);
 
     esp_zb_zcl_cluster_t _cluster;
     clusterCb _callback = nullptr;
     ZbEndPoint* _endPoint = nullptr;
 
+
 protected:
     esp_zb_attribute_list_t* _attr_list;
+
+    /// @brief struct of attribute for returning type and access function
+    struct attr_t {
+        uint8_t type;
+        uint8_t access;
+    };
 
 protected:
     void _init(uint16_t id, bool isClient);
@@ -37,6 +71,10 @@ protected:
     /// Attributes that already exists are not overided
     /// @param other the source cluster
     void _copyAttributes(const ZbCluster& other);
+
+    /// @brief Helper funtion to get the event id
+    /// @return  event id
+    int32_t getEventId();
 
 public:
     /// @brief Constructor
@@ -67,11 +105,26 @@ public:
 
     bool attributeWasSet(uint16_t attr_id, void* value);
     bool setAttribute(uint16_t attr_id, void* value);
+
     uint8_t sendCommand(uint16_t cmd); // TODO add data
+
+    /// @brief Send a read attr command on the network
+    /// @param attrId the Id of the attribute to be read
+    /// @param dst_endpoint endpoint on the remote device
+    /// @param short_addr address of the remote device
+    /// @return transaction number
+    uint8_t readAttribute(uint16_t attrId , uint8_t dst_endpoint = 1, 
+                        uint16_t short_addr = 0x0000); // TODO add data
+    
+    /// @brief callback from ZbNode that will update attr locally
+    /// @param readAttrs the list of received attr that were asked to be read
+    /// @return 
+    esp_err_t attributesWereRead(esp_zb_zcl_read_attr_resp_variable_t* readAttrs);
+
+
 
     void setReporting(uint16_t attr_id);
 
 private:
-
-        
+       
 };

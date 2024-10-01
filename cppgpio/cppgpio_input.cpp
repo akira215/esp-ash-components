@@ -74,7 +74,8 @@ GpioInput::GpioInput(void)
 }
 GpioInput::~GpioInput()
 {
-
+    clearEventHandlers();
+    disableInterrupt();
 }
 
 esp_err_t GpioInput::init(const gpio_num_t pin, const bool activeLow)
@@ -240,6 +241,7 @@ esp_err_t GpioInput::clearEventHandlers()
         esp_event_handler_unregister_with(_custom_event_loop_handle, 
                                     INPUT_EVENTS, _pin, _event_handle);
         _custom_event_handler_set = false;
+        _event_handle = nullptr;
     }
     else if (_event_handler_set)
     {

@@ -29,6 +29,7 @@
 
 // Static init
 TaskHandle_t ZbNode::_zbTask = NULL;
+ZbNode::readyCb_t ZbNode::_readyCallback = nullptr;
 esp_zb_ep_list_t* ZbNode::_ep_list = nullptr;
 std::map<uint8_t,ZbEndPoint*> ZbNode::_endPointMap = {};
 
@@ -64,6 +65,8 @@ ZbNode* ZbNode::getInstance()
    return &instance;
 }
 
+
+
 ZbNode::ZbNode()
 { 
     esp_zb_platform_config_t config;
@@ -90,6 +93,12 @@ ZbNode::ZbNode()
 ZbNode::~ZbNode()
 {
     //TODO del all ZbEndPoint objects
+}
+
+//Static
+void ZbNode::setReadyCallback(readyCb_t cb)
+{
+    _readyCallback = cb;
 }
 
 void ZbNode::ledFlash(uint64_t speed)
@@ -179,7 +188,9 @@ void ZbNode::handleDeviceReboot(esp_err_t err)
             ESP_LOGD(ZB_TAG, "Device rebooted successfully, Short Address: (0x%04hx)",
                     esp_zb_get_short_address());
             ledFlash(0);
-            //bindAttribute(10); //////////TODEL////////////////////////////////////////////////
+            // Trigger the callback if any
+            if(_readyCallback)
+                _readyCallback();
         }
     } else {
         // commissioning failed 
@@ -367,8 +378,8 @@ esp_err_t ZbNode::handlingCmdSetAttribute(const esp_zb_zcl_set_attr_value_messag
 
     auto it = _endPointMap.find(msg->info.dst_endpoint);
     if (it == _endPointMap.end()){
-         ESP_LOGW(ZB_TAG, "Set Attr - No endpoint %d found", msg->info.dst_endpoint);
-         return ESP_ERR_NOT_FOUND;
+        ESP_LOGW(ZB_TAG, "Set Attr - No endpoint %d found", msg->info.dst_endpoint);
+        return ESP_ERR_NOT_FOUND;
     }
 
     ZbCluster* cluster = it->second->getCluster(msg->info.cluster, false);
@@ -389,6 +400,32 @@ esp_err_t ZbNode::handlingCmdSetAttribute(const esp_zb_zcl_set_attr_value_messag
     return ESP_OK;   
 }
 
+esp_err_t ZbNode::handlingCmdReadAttribute(const esp_zb_zcl_cmd_read_attr_resp_message_t *msg)
+{
+    ESP_RETURN_ON_FALSE(msg, ESP_FAIL, ZB_TAG, "Read Attr - Empty message");
+    ESP_RETURN_ON_FALSE(msg->info.status == ESP_ZB_ZCL_STATUS_SUCCESS, ESP_ERR_INVALID_ARG, 
+                        ZB_TAG, "Read Attribute received message: error status(%d)",
+                        msg->info.status);
+    
+    ESP_LOGD(ZB_TAG, "Received read attr message from addr(0x%x), endpoint(%d), cluster(0x%x)", 
+            msg->info.src_address.u.short_addr, msg->info.src_endpoint, msg->info.cluster);
+
+    auto it = _endPointMap.find(msg->info.dst_endpoint);
+    if (it == _endPointMap.end()){
+        ESP_LOGW(ZB_TAG, "Read Attr - No endpoint %d found", msg->info.dst_endpoint);
+        return ESP_ERR_NOT_FOUND;
+    }
+
+    ZbCluster* cluster = it->second->getCluster(msg->info.cluster, true);
+    if (!cluster){
+        ESP_LOGW(ZB_TAG, "Read Attr - No cluster %d found for endpoint %d", 
+                        msg->info.cluster, msg->info.dst_endpoint);
+        return ESP_ERR_NOT_FOUND;
+    }
+
+    return cluster->attributesWereRead(msg->variables);
+}
+
 
 esp_err_t ZbNode::handleZbActions(esp_zb_core_action_callback_id_t callback_id, 
                                         const void *message)
@@ -405,10 +442,11 @@ esp_err_t ZbNode::handleZbActions(esp_zb_core_action_callback_id_t callback_id,
     case ESP_ZB_CORE_CMD_DEFAULT_RESP_CB_ID:
         ret = handlingCmdDefaultResp((esp_zb_zcl_cmd_default_resp_message_t *)message);
         break;
-    /*
+    
     case ESP_ZB_CORE_CMD_READ_ATTR_RESP_CB_ID:
-        ret = zb_read_attr_resp_handler((esp_zb_zcl_cmd_read_attr_resp_message_t *)message);
+        ret = handlingCmdReadAttribute((esp_zb_zcl_cmd_read_attr_resp_message_t *)message);
         break;
+    /*
     case ESP_ZB_CORE_CMD_REPORT_CONFIG_RESP_CB_ID:
         ret = zb_configure_report_resp_handler((esp_zb_zcl_cmd_config_report_resp_message_t *)message);
         break;

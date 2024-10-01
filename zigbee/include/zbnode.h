@@ -37,9 +37,13 @@
 
 class ZbNode
 {
+    /// @brief Joined callback type
+    typedef void (*readyCb_t)(void);
+    
     static std::map<uint8_t,ZbEndPoint*>    _endPointMap;
     static esp_zb_ep_list_t*                _ep_list;
 
+    static readyCb_t                        _readyCallback;
     static TaskHandle_t                     _zbTask;
 
     #ifdef ZB_USE_LED
@@ -58,6 +62,11 @@ public:
 
     /// @brief Instanciante the obj or return the point to the unique obj
     static ZbNode* getInstance();
+
+    /// @brief This callback will be called each time device successfully 
+    /// connect to the network
+    /// @param cb function to be called;
+    static void setReadyCallback(readyCb_t cb);
 
     /// @brief Helper to flash led
     /// @param speed flash cycle in ms. if 0, led will be set to off, 
@@ -136,6 +145,7 @@ protected:
     // Zb Actions
     esp_err_t handlingCmdDefaultResp(const esp_zb_zcl_cmd_default_resp_message_t *msg);
     esp_err_t handlingCmdSetAttribute(const esp_zb_zcl_set_attr_value_message_t *msg);
+    esp_err_t handlingCmdReadAttribute(const esp_zb_zcl_cmd_read_attr_resp_message_t *msg);
 
     static void print_binding_table_cb(const esp_zb_zdo_binding_table_info_t *record, void *user_ctx);
     static void print_binding_table_next(uint8_t index);

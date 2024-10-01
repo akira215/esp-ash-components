@@ -110,7 +110,7 @@ void Main::setup(void)
 
     // System Event Loop
     esp_event_loop_create_default();    // Create System Event Loop
-    // Get a pointer of pointer to retrieve the instance in the event
+    // Get a pointer of pointer to retrieve the instance in the event loop
     Main** ptr = new Main*(this);
     cppButton.setEventHandler(&button_event_handler, ptr);
 

@@ -12,3 +12,5 @@
 #include "zbIdentifyCluster.h"
 #include "zbOnOffCluster.h"
 #include "zbTemperatureMeasCluster.h"
+#include "zbMeteringCluster.h"
+#include "zbTimeCluster.h"
