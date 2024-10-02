@@ -23,7 +23,8 @@ class ZbEndPoint;
 // Declare an event base
 ESP_EVENT_DECLARE_BASE(ZCL_EVENTS);         // declaration of the ZCL events family
 
-
+//TODO del all callback
+//TODO implement custom event loop for Zigbee
 
 class ZbCluster
 {
@@ -41,18 +42,18 @@ class ZbCluster
         ATTR_UPDATED_REMOTELY
     } eventType;
 
+    /// @brief cluster callback type
+    typedef void (*clusterCb)(uint16_t attrId, void* value);
+    esp_zb_zcl_cluster_t _cluster;
+    clusterCb _callback = nullptr;
+    ZbEndPoint* _endPoint = nullptr;    
 
-    typedef struct {   
+public:
+  typedef struct {   
         uint16_t    attribute_id;
         eventType   event;
     } eventArgs;
-
-    /// @brief cluster callback type
-    typedef void (*clusterCb)(uint16_t attrId, void* value);
-
-    esp_zb_zcl_cluster_t _cluster;
-    clusterCb _callback = nullptr;
-    ZbEndPoint* _endPoint = nullptr;
+    
 
 
 protected:
@@ -125,6 +126,14 @@ public:
 
     void setReporting(uint16_t attr_id);
 
+
+    esp_err_t registerEventHandler(esp_event_handler_t event_handler);
+
 private:
+    /// @brief Helper static method to get event args
+    /// @param attrId the attribute Id that raise the event
+    /// @param event the event type
+    /// @return the event args to be retrieve by the handler 
+    static eventArgs getEventArgs(uint16_t attrId, eventType event);
        
 };

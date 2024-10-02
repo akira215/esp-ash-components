@@ -12,11 +12,13 @@
 #include <iostream> // TODEL
 #include <esp_log.h> // TODEL
 #include "esp_err.h"
+#include "esp_check.h"
 
 static const char *ZCL_TAG = "ZCL_CPP";
 
 // Event source ZCL related definitions
 ESP_EVENT_DEFINE_BASE(ZCL_EVENTS);
+//esp_event_base_t
 
 ZbCluster::ZbCluster()
 {
@@ -212,11 +214,13 @@ esp_err_t ZbCluster::attributesWereRead(esp_zb_zcl_read_attr_resp_variable_t* at
                         ESP_LOGW(ZCL_TAG, "Endpoint (%d), Cluster (%d), read attr id (%d) error setting local value (%x)",
                         _endPoint->getId(), getId(), attrs->attribute.id, ret);
                     else {
-                        eventArgs args;
-                        args.attribute_id = local_attr->id;
-                        args.event =  ATTR_UPDATED_AFTER_READ;
+                        eventArgs args = getEventArgs(local_attr->id, ATTR_UPDATED_AFTER_READ);
+                        //args.attribute_id = local_attr->id;
+                        //args.event =  ATTR_UPDATED_AFTER_READ;
+                        ESP_LOGW(ZCL_TAG, "Posting event %x, attr ID %x", ATTR_UPDATED_AFTER_READ, local_attr->id );
                         esp_event_post(ZCL_EVENTS, getEventId(),
-                                        &args, sizeof(eventArgs), portMAX_DELAY);
+                                        &args, 
+                                        sizeof(eventArgs), portMAX_DELAY);
                     }
                 } else { // Read attribute type is not the same as cluster attr type
                     ESP_LOGW(ZCL_TAG, "Endpoint (%d), Cluster (%d), read attr id (%d) is type (%x) as local type is (%x)",
@@ -275,6 +279,8 @@ void ZbCluster::setReporting(uint16_t attr_id)
     //esp_zb_zcl_config_report_cmd_req();
 }
 
+/// Helpers ////////////////////////////////////////////////////////////////////////////
+
 int32_t ZbCluster::getEventId()
 {
     eventId_t e;
@@ -283,4 +289,21 @@ int32_t ZbCluster::getEventId()
     e.src.endpointId = _endPoint->getId();
 
     return e.id;
+}
+// Static
+ZbCluster::eventArgs ZbCluster::getEventArgs(uint16_t attrId, eventType event)
+{
+    eventArgs args;
+    args.attribute_id = attrId;
+    args.event = event;
+
+    return args;
+}
+
+esp_err_t ZbCluster::registerEventHandler(esp_event_handler_t event_handler)
+{
+    ESP_RETURN_ON_FALSE(_endPoint, ESP_ERR_NOT_ALLOWED, ZCL_TAG, 
+                        "Cluster has not been attached to endpoint yet");
+
+    return esp_event_handler_register(ZCL_EVENTS, getEventId(), event_handler, (void*) this);
 }
