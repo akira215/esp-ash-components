@@ -389,13 +389,7 @@ esp_err_t ZbNode::handlingCmdSetAttribute(const esp_zb_zcl_set_attr_value_messag
         return ESP_ERR_NOT_FOUND;
     }
 
-    bool res = cluster->attributeWasSet(msg->attribute.id, msg->attribute.data.value);
-    if(!res){
-        ESP_LOGW(ZB_TAG, "Set Attr - No callback for endpoint(%d), cluster(0x%x), attribute(0x%x)",
-                msg->info.dst_endpoint, msg->info.cluster,
-                msg->attribute.id);
-        return ESP_ERR_NOT_FOUND;
-    }
+    cluster->attributeWasSet(msg->attribute.id, msg->attribute.data.value);
 
     return ESP_OK;   
 }

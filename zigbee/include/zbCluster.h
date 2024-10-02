@@ -7,7 +7,7 @@
 
 #pragma once
 
-//#include <vector>
+#include <vector>
 #include <list>
 #include <memory>
 #include <cstring>
@@ -23,11 +23,24 @@ class ZbEndPoint;
 // Declare an event base
 ESP_EVENT_DECLARE_BASE(ZCL_EVENTS);         // declaration of the ZCL events family
 
-//TODO del all callback
+//TODO unregister handler
 //TODO implement custom event loop for Zigbee
 
 class ZbCluster
 {
+public:
+    typedef enum {
+        ATTR_UPDATED_AFTER_READ    = 0x00,
+        ATTR_UPDATED_REMOTELY
+    } eventType;
+
+    typedef struct {   
+        uint16_t    attribute_id;
+        eventType   event;
+        void*       value;
+    } eventArgs;
+
+private:
     typedef union __attribute__((packed)) {
         struct {
             uint16_t    clusterId:16;
@@ -37,22 +50,16 @@ class ZbCluster
         int32_t id;
     } eventId_t;
 
-    typedef enum {
-        ATTR_UPDATED_AFTER_READ    = 0x00,
-        ATTR_UPDATED_REMOTELY
-    } eventType;
 
     /// @brief cluster callback type
-    typedef void (*clusterCb)(uint16_t attrId, void* value);
+    typedef void (*clusterCb)(eventType event, uint16_t attrId, void* value);
+    
     esp_zb_zcl_cluster_t _cluster;
-    clusterCb _callback = nullptr;
-    ZbEndPoint* _endPoint = nullptr;    
+    ZbEndPoint* _endPoint = nullptr;
 
-public:
-  typedef struct {   
-        uint16_t    attribute_id;
-        eventType   event;
-    } eventArgs;
+    std::vector<clusterCb> _clusterEventHandlers;   
+
+
     
 
 
@@ -76,6 +83,8 @@ protected:
     /// @brief Helper funtion to get the event id
     /// @return  event id
     int32_t getEventId();
+    
+    void postEvent(eventType event, uint16_t attrId, void* value);
 
 public:
     /// @brief Constructor
@@ -102,9 +111,7 @@ public:
 
     esp_zb_zcl_cluster_t* getClusterStruct();
 
-    void setCallback(clusterCb callback);
-
-    bool attributeWasSet(uint16_t attr_id, void* value);
+    void attributeWasSet(uint16_t attr_id, void* value);
     bool setAttribute(uint16_t attr_id, void* value);
 
     uint8_t sendCommand(uint16_t cmd); // TODO add data
@@ -127,13 +134,15 @@ public:
     void setReporting(uint16_t attr_id);
 
 
-    esp_err_t registerEventHandler(esp_event_handler_t event_handler);
+    void registerEventHandler(clusterCb handler);
 
 private:
-    /// @brief Helper static method to get event args
-    /// @param attrId the attribute Id that raise the event
+    /// @brief Helper method to post cluster event
     /// @param event the event type
-    /// @return the event args to be retrieve by the handler 
-    static eventArgs getEventArgs(uint16_t attrId, eventType event);
+    /// @param attrId the attribute Id that raise the event
+    /// @return  
+    esp_err_t postInternal(eventType event, uint16_t attrId, void* value);
+
+    static void onInternal(void *handler_args, esp_event_base_t base, int32_t id, void *event_data);
        
 };
