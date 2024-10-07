@@ -16,9 +16,6 @@
 
 static const char *ZCL_TAG = "ZCL_CPP";
 
-// Event source ZCL related definitions
-ESP_EVENT_DEFINE_BASE(ZCL_EVENTS);
-//esp_event_base_t
 
 ZbCluster::ZbCluster()
 {
@@ -104,7 +101,7 @@ bool ZbCluster::isServer() const
 
 void ZbCluster::attributeWasSet(uint16_t attr_id, void* value)
 { 
-    postInternal(ATTR_UPDATED_REMOTELY, attr_id, value);
+    postEvent(ATTR_UPDATED_REMOTELY, attr_id, value);
 }
 
 bool ZbCluster::setAttribute(uint16_t attr_id, void* value)
@@ -126,9 +123,6 @@ bool ZbCluster::setAttribute(uint16_t attr_id, void* value)
 void ZbCluster::setEndPoint(ZbEndPoint* parent)
 {
     _endPoint = parent;
-    //TODO check if system event loop is running
-    esp_event_handler_register(ZCL_EVENTS, getEventId(), 
-                                      &onInternal, (void*) this);
 }
 
 uint8_t ZbCluster::sendCommand(uint16_t cmd)
@@ -209,7 +203,7 @@ esp_err_t ZbCluster::attributesWereRead(esp_zb_zcl_read_attr_resp_variable_t* at
                         ESP_LOGW(ZCL_TAG, "Endpoint (%d), Cluster (%d), read attr id (%d) error setting local value (%x)",
                         _endPoint->getId(), getId(), attrs->attribute.id, ret);
                     else 
-                        postInternal(ATTR_UPDATED_AFTER_READ,local_attr->id, local_attr->data_p);
+                        postEvent(ATTR_UPDATED_AFTER_READ,local_attr->id, local_attr->data_p);
                 } else { // Read attribute type is not the same as cluster attr type
                     ESP_LOGW(ZCL_TAG, "Endpoint (%d), Cluster (%d), read attr id (%d) is type (%x) as local type is (%x)",
                         _endPoint->getId(), getId(), attrs->attribute.id, attrs->attribute.data.type, local_attr->type );
@@ -267,7 +261,7 @@ void ZbCluster::setReporting(uint16_t attr_id)
     //esp_zb_zcl_config_report_cmd_req();
 }
 
-/// Helpers ////////////////////////////////////////////////////////////////////////////
+/// Events ////////////////////////////////////////////////////////////////////////////
 
 int32_t ZbCluster::getEventId()
 {
@@ -279,7 +273,7 @@ int32_t ZbCluster::getEventId()
     return e.id;
 }
 
-
+/*
 esp_err_t ZbCluster::postInternal(eventType event, uint16_t attrId, void* value)
 {
     eventArgs args;
@@ -301,16 +295,23 @@ void ZbCluster::onInternal(void *handler_args, esp_event_base_t base, int32_t id
 
     instance->postEvent(e->event,e->attribute_id,e->value);
 }
+*/
 
 void ZbCluster::postEvent(eventType event, uint16_t attrId, void* value)
 {
     for (auto & cb : _clusterEventHandlers) {
-        cb(event, attrId, value);
+        //cb(event, attrId, value);
+        _eventLoop.enqueue(std::bind(std::ref(cb), event, attrId, value));
     }
-}
 
-void ZbCluster::registerEventHandler(clusterCb handler)
+}
+/*
+
+void ZbCluster::registerEventHandler(clusterCallback_t handler)
 {
+ 
+ ////////////////////////////////////// NEEEEED THIS TO CALL THE MEMBER
+ 
    // ESP_RETURN_ON_FALSE(_endPoint, ESP_ERR_NOT_ALLOWED, ZCL_TAG, 
      //                   "Cluster has not been attached to endpoint yet");
 
@@ -319,3 +320,4 @@ void ZbCluster::registerEventHandler(clusterCb handler)
     //return esp_event_handler_register(ZCL_EVENTS, getEventId(), 
                                      //   event_handler, (void*) this);
 }
+*/

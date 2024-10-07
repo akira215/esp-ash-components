@@ -12,16 +12,15 @@
 #include <memory>
 #include <cstring>
 #include <string>
-#include "esp_event.h"
+//#include "esp_event.h"
 #include "esp_zigbee_core.h"
 
+#include <functional>
+#include "eventLoop.h"
 
 #include <iostream> // TODEL
 class ZbEndPoint;
 
-
-// Declare an event base
-ESP_EVENT_DECLARE_BASE(ZCL_EVENTS);         // declaration of the ZCL events family
 
 //TODO unregister handler
 //TODO implement custom event loop for Zigbee
@@ -50,18 +49,14 @@ private:
         int32_t id;
     } eventId_t;
 
-
-    /// @brief cluster callback type
-    typedef void (*clusterCb)(eventType event, uint16_t attrId, void* value);
-    
     esp_zb_zcl_cluster_t _cluster;
     ZbEndPoint* _endPoint = nullptr;
 
-    std::vector<clusterCb> _clusterEventHandlers;   
-
-
-    
-
+    /// @brief cluster callback type
+    typedef std::function<void(eventType, uint16_t, void*)> clusterCallback_t;
+    //typedef void (*clusterCb)(eventType event, uint16_t attrId, void* value);
+    std::vector<clusterCallback_t> _clusterEventHandlers;   
+    EventLoop _eventLoop;
 
 protected:
     esp_zb_attribute_list_t* _attr_list;
@@ -134,9 +129,23 @@ public:
     void setReporting(uint16_t attr_id);
 
 
-    void registerEventHandler(clusterCb handler);
+    /// @brief register event handler for this cluster.
+    /// Event handler shall be type clusterCallback_t : 
+    /// void(eventType, uint16_t attrId, void* value) 
+    /// @param func pointer to the method ex: &Main::clusterHandler
+    /// @param instance instance of the object for this handler (ex: this)
+    template<typename C, typename... Args>
+    void registerEventHandler(void (C::* func)(Args...), C* instance) {
+        _clusterEventHandlers.push_back(std::bind(func,std::ref(*instance),
+            std::placeholders::_1,
+            std::placeholders::_2,
+            std::placeholders::_3));
+    };
+
+    //void registerEventHandler(clusterCallback_t handler);
 
 private:
+/*
     /// @brief Helper method to post cluster event
     /// @param event the event type
     /// @param attrId the attribute Id that raise the event
@@ -144,5 +153,5 @@ private:
     esp_err_t postInternal(eventType event, uint16_t attrId, void* value);
 
     static void onInternal(void *handler_args, esp_event_base_t base, int32_t id, void *event_data);
-       
+ */      
 };
