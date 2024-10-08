@@ -1,9 +1,10 @@
 #include "eventLoop.h"
 
-EventLoop::EventLoop()
+EventLoop::EventLoop(const char* name, uint32_t usStackDepth, UBaseType_t uxPriority)
 {
     // TODO check if task name shall be unique for debugging purpose
-    xTaskCreate(&EventLoop::taskFunc, "EventLoop", 4096, this, 5, &_task);
+    xTaskCreate(&EventLoop::taskFunc, name, usStackDepth,
+                                         this, uxPriority, &_task);
 }
 
 EventLoop::~EventLoop() 

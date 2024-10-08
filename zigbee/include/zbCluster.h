@@ -56,7 +56,7 @@ private:
     typedef std::function<void(eventType, uint16_t, void*)> clusterCallback_t;
     //typedef void (*clusterCb)(eventType event, uint16_t attrId, void* value);
     std::vector<clusterCallback_t> _clusterEventHandlers;   
-    EventLoop _eventLoop;
+    static EventLoop* _eventLoop;
 
 protected:
     esp_zb_attribute_list_t* _attr_list;
@@ -74,10 +74,6 @@ protected:
     /// Attributes that already exists are not overided
     /// @param other the source cluster
     void _copyAttributes(const ZbCluster& other);
-
-    /// @brief Helper funtion to get the event id
-    /// @return  event id
-    int32_t getEventId();
     
     void postEvent(eventType event, uint16_t attrId, void* value);
 
@@ -145,13 +141,5 @@ public:
     //void registerEventHandler(clusterCallback_t handler);
 
 private:
-/*
-    /// @brief Helper method to post cluster event
-    /// @param event the event type
-    /// @param attrId the attribute Id that raise the event
-    /// @return  
-    esp_err_t postInternal(eventType event, uint16_t attrId, void* value);
-
-    static void onInternal(void *handler_args, esp_event_base_t base, int32_t id, void *event_data);
- */      
+   
 };

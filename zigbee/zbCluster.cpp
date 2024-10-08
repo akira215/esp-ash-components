@@ -16,10 +16,13 @@
 
 static const char *ZCL_TAG = "ZCL_CPP";
 
+// Static init
+EventLoop* ZbCluster::_eventLoop = nullptr;
 
 ZbCluster::ZbCluster()
 {
-
+    if(!_eventLoop)
+        _eventLoop = new EventLoop ();
 }
 
 ZbCluster::~ZbCluster()
@@ -99,11 +102,6 @@ bool ZbCluster::isServer() const
 }
 
 
-void ZbCluster::attributeWasSet(uint16_t attr_id, void* value)
-{ 
-    postEvent(ATTR_UPDATED_REMOTELY, attr_id, value);
-}
-
 bool ZbCluster::setAttribute(uint16_t attr_id, void* value)
 {
     esp_zb_lock_acquire(portMAX_DELAY);
@@ -176,6 +174,11 @@ uint8_t ZbCluster::readAttribute(uint16_t attrId, uint8_t dst_endpoint,
 
     return ret;
 
+}
+
+void ZbCluster::attributeWasSet(uint16_t attr_id, void* value)
+{ 
+    postEvent(ATTR_UPDATED_REMOTELY, attr_id, value);
 }
 
 esp_err_t ZbCluster::attributesWereRead(esp_zb_zcl_read_attr_resp_variable_t* attrs)
@@ -263,61 +266,12 @@ void ZbCluster::setReporting(uint16_t attr_id)
 
 /// Events ////////////////////////////////////////////////////////////////////////////
 
-int32_t ZbCluster::getEventId()
-{
-    eventId_t e;
-    e.src.isClient = (uint8_t)isClient();
-    e.src.clusterId = getId();
-    e.src.endpointId = _endPoint->getId();
-
-    return e.id;
-}
-
-/*
-esp_err_t ZbCluster::postInternal(eventType event, uint16_t attrId, void* value)
-{
-    eventArgs args;
-    args.attribute_id = attrId;
-    args.event = event;
-    args.value = value;
-
-    ESP_LOGW(ZCL_TAG, "Posting event %x, attr ID %x", event, attrId);
-    return esp_event_post(ZCL_EVENTS, getEventId(), &args, 
-                                    sizeof(eventArgs), portMAX_DELAY);
-
-}
-
-// Static
-void ZbCluster::onInternal(void *handler_args, esp_event_base_t base, int32_t id, void *event_data)
-{
-    ZbCluster* instance = static_cast<ZbCluster*>(handler_args);
-    ZbCluster::eventArgs* e = static_cast<ZbCluster::eventArgs*>(event_data);
-
-    instance->postEvent(e->event,e->attribute_id,e->value);
-}
-*/
 
 void ZbCluster::postEvent(eventType event, uint16_t attrId, void* value)
 {
+    // Call all the registered callback Id
     for (auto & cb : _clusterEventHandlers) {
         //cb(event, attrId, value);
-        _eventLoop.enqueue(std::bind(std::ref(cb), event, attrId, value));
+        _eventLoop->enqueue(std::bind(std::ref(cb), event, attrId, value));
     }
-
 }
-/*
-
-void ZbCluster::registerEventHandler(clusterCallback_t handler)
-{
- 
- ////////////////////////////////////// NEEEEED THIS TO CALL THE MEMBER
- 
-   // ESP_RETURN_ON_FALSE(_endPoint, ESP_ERR_NOT_ALLOWED, ZCL_TAG, 
-     //                   "Cluster has not been attached to endpoint yet");
-
-    _clusterEventHandlers.push_back(handler);
-
-    //return esp_event_handler_register(ZCL_EVENTS, getEventId(), 
-                                     //   event_handler, (void*) this);
-}
-*/

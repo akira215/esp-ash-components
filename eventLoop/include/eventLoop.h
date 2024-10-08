@@ -20,7 +20,11 @@ class EventLoop
 public:
 	using callable_t = std::function<void()>;
 	
-	EventLoop();
+	/// @brief Constructor of the event loop 
+	/// @param usStackDepth as per xTaskCreate
+	/// @param uxPriority as per xTaskCreate
+	EventLoop(const char* name = "EventLoop",uint32_t usStackDepth = 4096, 
+									UBaseType_t uxPriority = 5);
 	EventLoop(const EventLoop&) = delete;
 	EventLoop(EventLoop&&) noexcept = delete;
 	~EventLoop() noexcept;
