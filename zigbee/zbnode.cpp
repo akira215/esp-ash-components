@@ -69,7 +69,6 @@ ZbNode* ZbNode::getInstance()
 }
 
 
-
 ZbNode::ZbNode()
 { 
     esp_zb_platform_config_t config;
@@ -89,7 +88,7 @@ ZbNode::ZbNode()
 
     esp_zb_init(&zb_nwk_cfg);
 
-    _ep_list = esp_zb_ep_list_create();
+    _ep_list = esp_zb_ep_list_create();        
 
 }
 
@@ -165,9 +164,8 @@ void ZbNode::handleDeviceReboot(esp_err_t err)
         uint64_t delay_ms = 1000;
         // commissioning failed 
         ESP_LOGW(ZB_TAG, "Failed to initialize Zigbee stack (status: %s)", esp_err_to_name(err));
-        ESP_LOGI(ZB_TAG, "Retrying in 1 sec...");
+        ESP_LOGI(ZB_TAG, "Retrying in %lld ms...", delay_ms);
         ScheduledTask* task = new ScheduledTask(&ZbNode::joinNetwork, this, delay_ms);
-        //esp_zb_scheduler_alarm((esp_zb_callback_t)joinNetwork, 0, 1000);
     }
 }
 
@@ -200,11 +198,10 @@ void ZbNode::handleNetworkSteering(esp_err_t err)
                     esp_zb_get_pan_id(), esp_zb_get_current_channel(), esp_zb_get_short_address());
     } else {
         postEvent(JOIN_FAIL);
-        uint64_t delay_ms = 500;
+        uint64_t delay_ms = 1000;
         ESP_LOGW(ZB_TAG, "Network steering was not successful (status: %s)", esp_err_to_name(err));
-        ESP_LOGI(ZB_TAG, "Retrying in : %lld ms", delay_ms);
+        ESP_LOGI(ZB_TAG, "Retrying in : %lld ms...", delay_ms);
         ScheduledTask* task = new ScheduledTask(&ZbNode::joinNetwork, this, delay_ms);
-        //esp_zb_scheduler_alarm((esp_zb_callback_t)joinNetwork, 0, delay_ms);
     }
     
 }
@@ -468,4 +465,5 @@ void ZbNode::postEvent(nodeEvent_t event)
     for (auto & cb : _nodeEventHandlers) {
         ZbNode::_eventLoop->enqueue(std::bind(std::ref(cb), event));
     }
+    
 }

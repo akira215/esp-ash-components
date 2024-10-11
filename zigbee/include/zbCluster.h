@@ -31,29 +31,15 @@ public:
     typedef enum {
         ATTR_UPDATED_AFTER_READ    = 0x00,
         ATTR_UPDATED_REMOTELY
-    } eventType;
-
-    typedef struct {   
-        uint16_t    attribute_id;
-        eventType   event;
-        void*       value;
-    } eventArgs;
+    } clusterEvent_t;
 
 private:
-    typedef union __attribute__((packed)) {
-        struct {
-            uint16_t    clusterId:16;
-            uint8_t     endpointId:8;
-            uint8_t     isClient:8;
-        } src;
-        int32_t id;
-    } eventId_t;
 
     esp_zb_zcl_cluster_t _cluster;
     ZbEndPoint* _endPoint = nullptr;
 
     /// @brief cluster callback type
-    typedef std::function<void(eventType, uint16_t, void*)> clusterCallback_t;
+    typedef std::function<void(clusterEvent_t, uint16_t, void*)> clusterCallback_t;
     //typedef void (*clusterCb)(eventType event, uint16_t attrId, void* value);
     std::vector<clusterCallback_t> _clusterEventHandlers;   
 
@@ -74,7 +60,7 @@ protected:
     /// @param other the source cluster
     void _copyAttributes(const ZbCluster& other);
     
-    void postEvent(eventType event, uint16_t attrId, void* value);
+    void postEvent(clusterEvent_t event, uint16_t attrId, void* value);
 
 public:
     /// @brief Constructor

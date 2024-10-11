@@ -270,7 +270,7 @@ void ZbCluster::setReporting(uint16_t attr_id)
 /// Events ////////////////////////////////////////////////////////////////////////////
 
 
-void ZbCluster::postEvent(eventType event, uint16_t attrId, void* value)
+void ZbCluster::postEvent(clusterEvent_t event, uint16_t attrId, void* value)
 {
     // Call all the registered callback Id
     for (auto & cb : _clusterEventHandlers) {

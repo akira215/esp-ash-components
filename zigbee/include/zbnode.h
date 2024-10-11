@@ -89,10 +89,10 @@ public:
     /// @param instance instance of the object for this handler (ex: this)
     template<typename C>
     void registerNodeEventHandler(void (C::* func)(nodeEvent_t), C* instance) {
-        auto f = std::bind(func,std::ref(*instance), 
-                                    std::placeholders::_1);
-        _nodeEventHandlers.push_back(f);
+        _nodeEventHandlers.push_back(std::bind(func,std::ref(*instance), 
+                                    std::placeholders::_1));
     };
+
 
     /// @brief Handle all the zb event. It is called by esp_zb_app_signal_handler
     void handleBdbEvent(esp_zb_app_signal_type_t signal_type,
