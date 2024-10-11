@@ -1,13 +1,6 @@
 menu "Zigbee Device"
     
-    config ZB_LED
-        int "On Board LED GPIO Num"
-        range -1 ENV_GPIO_OUT_RANGE_MAX
-        default 23
-        help
-            GPIO number for Led that Zigbee device will use as UI.
-            If defined to GPIO_NUM_NC = -1, no led will be used
-    
+ 
     config ZB_STACK_DEPTH
         int "Stack depth for Zigbee task"
         range 2048 8192

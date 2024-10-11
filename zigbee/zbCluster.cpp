@@ -8,6 +8,7 @@
 */
 #include "zbEndpoint.h"
 #include "zbCluster.h"
+#include "zbNode.h"
 
 #include <iostream> // TODEL
 #include <esp_log.h> // TODEL
@@ -16,13 +17,11 @@
 
 static const char *ZCL_TAG = "ZCL_CPP";
 
-// Static init
-EventLoop* ZbCluster::_eventLoop = nullptr;
+
 
 ZbCluster::ZbCluster()
 {
-    if(!_eventLoop)
-        _eventLoop = new EventLoop ();
+ 
 }
 
 ZbCluster::~ZbCluster()
@@ -146,7 +145,7 @@ uint8_t ZbCluster::sendCommand(uint16_t cmd)
     return ret;
 }
 
-uint8_t ZbCluster::readAttribute(uint16_t attrId, uint8_t dst_endpoint, 
+uint8_t ZbCluster::readAttribute(std::span<uint16_t> attrList, uint8_t dst_endpoint, 
                                     uint16_t short_addr)
 {
     esp_zb_zcl_read_attr_cmd_t cmd_req;
@@ -159,21 +158,23 @@ uint8_t ZbCluster::readAttribute(uint16_t attrId, uint8_t dst_endpoint,
     cmd_req.address_mode = ESP_ZB_APS_ADDR_MODE_16_ENDP_PRESENT;
     
     cmd_req.clusterID = getId();
-    //TODO implement multiple attr reading
-    /*
-    uint16_t attributes[] = {ESP_ZB_ZCL_ATTR_ON_OFF_ON_OFF_ID};
-    cmd_req.attr_number = sizeof(attributes) / sizeof(uint16_t);;
-    cmd_req.attr_field = attributes;
-    */
-    cmd_req.attr_number = 1;
-    cmd_req.attr_field = &attrId;
-
+    
+    cmd_req.attr_number = attrList.size();
+    cmd_req.attr_field = attrList.data();
+    
     esp_zb_lock_acquire(portMAX_DELAY);                                               
 	ret = esp_zb_zcl_read_attr_cmd_req( &cmd_req);
     esp_zb_lock_release();
 
     return ret;
 
+}
+
+uint8_t ZbCluster::readAttribute(uint16_t attrId, uint8_t dst_endpoint, 
+                                    uint16_t short_addr)
+{
+    uint16_t arr[1]; arr[0] = attrId;
+    return readAttribute(std::span(arr));
 }
 
 void ZbCluster::attributeWasSet(uint16_t attr_id, void* value)
@@ -184,7 +185,9 @@ void ZbCluster::attributeWasSet(uint16_t attr_id, void* value)
 esp_err_t ZbCluster::attributesWereRead(esp_zb_zcl_read_attr_resp_variable_t* attrs)
 {
     esp_zb_zcl_attr_t* local_attr = nullptr;
+ 
     while (attrs){
+
         if(attrs->status == ESP_ZB_ZCL_STATUS_SUCCESS)
         {
             // look up if the attribute exist in this cluster
@@ -220,7 +223,7 @@ esp_err_t ZbCluster::attributesWereRead(esp_zb_zcl_read_attr_resp_variable_t* at
                         _endPoint->getId(), getId(), attrs->attribute.id, attrs->status);
         }
         attrs = attrs->next;
-    }
+    } // while(attrs)
 
     return ESP_OK;
 }
@@ -272,6 +275,6 @@ void ZbCluster::postEvent(eventType event, uint16_t attrId, void* value)
     // Call all the registered callback Id
     for (auto & cb : _clusterEventHandlers) {
         //cb(event, attrId, value);
-        _eventLoop->enqueue(std::bind(std::ref(cb), event, attrId, value));
+        ZbNode::_eventLoop->enqueue(std::bind(std::ref(cb), event, attrId, value));
     }
 }

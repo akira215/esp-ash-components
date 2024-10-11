@@ -9,6 +9,7 @@
 
 #include <vector>
 #include <list>
+#include <span>
 #include <memory>
 #include <cstring>
 #include <string>
@@ -16,7 +17,6 @@
 #include "esp_zigbee_core.h"
 
 #include <functional>
-#include "eventLoop.h"
 
 #include <iostream> // TODEL
 class ZbEndPoint;
@@ -56,7 +56,6 @@ private:
     typedef std::function<void(eventType, uint16_t, void*)> clusterCallback_t;
     //typedef void (*clusterCb)(eventType event, uint16_t attrId, void* value);
     std::vector<clusterCallback_t> _clusterEventHandlers;   
-    static EventLoop* _eventLoop;
 
 protected:
     esp_zb_attribute_list_t* _attr_list;
@@ -106,6 +105,14 @@ public:
     bool setAttribute(uint16_t attr_id, void* value);
 
     uint8_t sendCommand(uint16_t cmd); // TODO add data
+
+    /// @brief Send a read attr command on the network
+    /// @param attrLsit list of attr Id to be read
+    /// @param dst_endpoint endpoint on the remote device
+    /// @param short_addr address of the remote device
+    /// @return transaction number
+    uint8_t readAttribute(std::span<uint16_t> attrList, uint8_t dst_endpoint = 1, 
+                                    uint16_t short_addr = 0x0000);
 
     /// @brief Send a read attr command on the network
     /// @param attrId the Id of the attribute to be read

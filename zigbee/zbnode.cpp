@@ -17,6 +17,7 @@
 #include "nvs_flash.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "scheduledTask.h"
 
 //#include "ha/esp_zigbee_ha_standard.h"
 
@@ -29,15 +30,17 @@
 
 // Static init
 TaskHandle_t ZbNode::_zbTask = NULL;
-ZbNode::readyCb_t ZbNode::_readyCallback = nullptr;
+
 esp_zb_ep_list_t* ZbNode::_ep_list = nullptr;
 std::map<uint8_t,ZbEndPoint*> ZbNode::_endPointMap = {};
+EventLoop* ZbNode::_eventLoop = new EventLoop("ZbEventLoop");
 
+/*
 #ifdef ZB_USE_LED
 BlinkTask* ZbNode::_ledBlinking = nullptr;
 GpioOutput ZbNode::_led { (gpio_num_t)CONFIG_ZB_LED }; //TODO led pin number in config file
 #endif
-
+*/
 
 static const char *ZB_TAG = "ZB_CPP";
 
@@ -95,44 +98,12 @@ ZbNode::~ZbNode()
     //TODO del all ZbEndPoint objects
 }
 
-//Static
-void ZbNode::setReadyCallback(readyCb_t cb)
-{
-    _readyCallback = cb;
-}
-
-void ZbNode::ledFlash(uint64_t speed)
-{
-    #ifdef ZB_USE_LED
-    if(speed == 0) 
-    {
-        if(_ledBlinking){
-        delete _ledBlinking;
-        _ledBlinking = nullptr;
-        }
-        _led.off();
-    } else if(speed == -1) {
-        if(_ledBlinking){
-        delete _ledBlinking;
-        _ledBlinking = nullptr;
-        }
-        _led.on();
-    } else {
-        if(!_ledBlinking)
-            _ledBlinking = new BlinkTask(_led, speed); // very short flash
-        else
-            _ledBlinking->setBlinkPeriod(speed);
-    }
-    #endif
-
-}
 
 bool ZbNode::isJoined()
 {
     return esp_zb_bdb_dev_joined();
 }
 
-//void ZbNode::handleBdbEvent(esp_zb_app_signal_t *event)
 void ZbNode::handleBdbEvent(esp_zb_app_signal_type_t signal_type,
                         esp_err_t status,
                         uint32_t *p_data)
@@ -187,29 +158,23 @@ void ZbNode::handleDeviceReboot(esp_err_t err)
         } else {
             ESP_LOGD(ZB_TAG, "Device rebooted successfully, Short Address: (0x%04hx)",
                     esp_zb_get_short_address());
-            ledFlash(0);
             // Trigger the callback if any
-            if(_readyCallback)
-                _readyCallback();
+            postEvent(JOINED);
         }
     } else {
+        uint64_t delay_ms = 1000;
         // commissioning failed 
         ESP_LOGW(ZB_TAG, "Failed to initialize Zigbee stack (status: %s)", esp_err_to_name(err));
         ESP_LOGI(ZB_TAG, "Retrying in 1 sec...");
-        esp_zb_scheduler_alarm((esp_zb_callback_t)joinNetwork, 0, 1000);
+        ScheduledTask* task = new ScheduledTask(&ZbNode::joinNetwork, this, delay_ms);
+        //esp_zb_scheduler_alarm((esp_zb_callback_t)joinNetwork, 0, 1000);
     }
 }
 
 void ZbNode::handleNetworkStatus(esp_err_t err, void* data)
 {
+    postEvent(NLME_STATUS);
     
-    if(isJoined()) 
-    {
-       ledFlash(0);
-    } else {
-        ledFlash(50); //very short flash
-    }
-
     struct nlme_status_indication {
 				uint8_t status;
 				uint16_t network_addr;
@@ -223,6 +188,7 @@ void ZbNode::handleNetworkSteering(esp_err_t err)
 {
 
     if (err == ESP_OK) {
+        postEvent(JOINED);
 
         esp_zb_ieee_addr_t extended_pan_id;
         esp_zb_get_extended_pan_id(extended_pan_id);
@@ -232,40 +198,37 @@ void ZbNode::handleNetworkSteering(esp_err_t err)
                     extended_pan_id[7], extended_pan_id[6], extended_pan_id[5], extended_pan_id[4],
                     extended_pan_id[3], extended_pan_id[2], extended_pan_id[1], extended_pan_id[0],
                     esp_zb_get_pan_id(), esp_zb_get_current_channel(), esp_zb_get_short_address());
-        
-
-        ledFlash(0);
     } else {
-        uint32_t delay_ms = 500;
+        postEvent(JOIN_FAIL);
+        uint64_t delay_ms = 500;
         ESP_LOGW(ZB_TAG, "Network steering was not successful (status: %s)", esp_err_to_name(err));
-        ESP_LOGI(ZB_TAG, "Retrying in : %ld ms", delay_ms);
-        esp_zb_scheduler_alarm((esp_zb_callback_t)joinNetwork, 0, delay_ms);
+        ESP_LOGI(ZB_TAG, "Retrying in : %lld ms", delay_ms);
+        ScheduledTask* task = new ScheduledTask(&ZbNode::joinNetwork, this, delay_ms);
+        //esp_zb_scheduler_alarm((esp_zb_callback_t)joinNetwork, 0, delay_ms);
     }
     
 }
 
 void ZbNode::handleLeaveNetwork(esp_err_t err)
 {
-    #ifdef ZB_USE_LED
-    ledFlash(-1);
-    #endif
+    postEvent(LEFT);
 
     ESP_LOGW(ZB_TAG, "Device left the network (status: %s)", esp_err_to_name(err));
 }
 
 
-esp_err_t ZbNode::joinNetwork(uint8_t param)
+void ZbNode::joinNetwork()
 {
     if(isJoined()){
         ESP_LOGI(ZB_TAG, "Device already joined, should leave before trying to join");
-        return ESP_ERR_NOT_ALLOWED;
+        return;
     }
+
+    postEvent(JOINING);
     
     ESP_LOGD(ZB_TAG, "Start network steering");
-
-    ledFlash(FAST_BLINK);
-
-    return esp_zb_bdb_start_top_level_commissioning(ESP_ZB_BDB_MODE_NETWORK_STEERING);
+   
+    esp_zb_bdb_start_top_level_commissioning(ESP_ZB_BDB_MODE_NETWORK_STEERING);
 
 }
 
@@ -278,7 +241,8 @@ void ZbNode::leaveNetwork()
     
     ESP_LOGD(ZB_TAG, "Leaving the network");
 
-    ledFlash(50);
+    postEvent(LEAVING);
+
     
     esp_zb_zdo_mgmt_leave_req_param_t param{};
 
@@ -298,10 +262,11 @@ void ZbNode::start()
     //Register the device 
     esp_zb_device_register(_ep_list);
     esp_zb_core_action_handler_register(zb_action_handler);
-    //xTaskCreate(zbTask, "Zigbee_Device", 4096, NULL, 5, NULL);
+    
     xTaskCreate(zbTask, "Zigbee_Device", CONFIG_ZB_STACK_DEPTH, NULL, 5, &_zbTask);
 }
 
+//Static
 void ZbNode::zbTask(void *pvParameters)
 {
 
@@ -417,7 +382,9 @@ esp_err_t ZbNode::handlingCmdReadAttribute(const esp_zb_zcl_cmd_read_attr_resp_m
         return ESP_ERR_NOT_FOUND;
     }
 
-    return cluster->attributesWereRead(msg->variables);
+    cluster->attributesWereRead(msg->variables);
+
+    return ESP_OK;
 }
 
 
@@ -495,3 +462,10 @@ esp_err_t ZbNode::setAttribute(uint8_t endp, uint16_t cluster_id, bool isClient,
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
+void ZbNode::postEvent(nodeEvent_t event)
+{
+    // Call all the registered callback Id
+    for (auto & cb : _nodeEventHandlers) {
+        ZbNode::_eventLoop->enqueue(std::bind(std::ref(cb), event));
+    }
+}

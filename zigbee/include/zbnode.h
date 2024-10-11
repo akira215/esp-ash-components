@@ -12,16 +12,21 @@
 #include "esp_zigbee_core.h"
 #include "zbEndpoint.h"
 #include "zbCluster.h"
+#include "eventLoop.h"
+
 
 #include <esp_err.h>
 
+#include <functional>
 #include <map>
-
+#include <vector>
+/*
 #if !CONFIG_ZB_LED || CONFIG_ZB_LED==-1 
     #warning "No led has been defined, zigbee lib will not use led"
 #else
     #define ZB_USE_LED
 #endif
+*/
 
 #define INSTALLCODE_POLICY_ENABLE       false   /* enable the install code policy for security */
 #define ED_MAX_CHILDREN                 10
@@ -37,19 +42,33 @@
 
 class ZbNode
 {
+public:
+    typedef enum {
+        JOINED    = 0x00,
+        JOINING,
+        NLME_STATUS,
+        JOIN_FAIL,
+        LEAVING,
+        LEFT,
+    } nodeEvent_t;
+    static EventLoop*                       _eventLoop;
+
+private:
     /// @brief Joined callback type
-    typedef void (*readyCb_t)(void);
-    
+    typedef std::function<void(nodeEvent_t)> nodeCallback_t;
+
     static std::map<uint8_t,ZbEndPoint*>    _endPointMap;
     static esp_zb_ep_list_t*                _ep_list;
 
-    static readyCb_t                        _readyCallback;
+    std::vector<nodeCallback_t>             _nodeEventHandlers;  
     static TaskHandle_t                     _zbTask;
 
-    #ifdef ZB_USE_LED
-    static BlinkTask*                       _ledBlinking;
-    static GpioOutput                       _led;
-    #endif
+    //#ifdef ZB_USE_LED
+    //static BlinkTask*                       _ledBlinking;
+    //static GpioOutput                       _led;
+    //#endif
+
+
 public:
   
     ~ZbNode();
@@ -63,15 +82,17 @@ public:
     /// @brief Instanciante the obj or return the point to the unique obj
     static ZbNode* getInstance();
 
-    /// @brief This callback will be called each time device successfully 
-    /// connect to the network
-    /// @param cb function to be called;
-    static void setReadyCallback(readyCb_t cb);
-
-    /// @brief Helper to flash led
-    /// @param speed flash cycle in ms. if 0, led will be set to off, 
-    /// if -1 led will be switch on
-    static void ledFlash(uint64_t speed);
+    /// @brief register event handler for the node.
+    /// Event handler shall be type nodeCallback_t : 
+    /// void(nodeEvent_t) 
+    /// @param func pointer to the method ex: &Main::clusterHandler
+    /// @param instance instance of the object for this handler (ex: this)
+    template<typename C>
+    void registerNodeEventHandler(void (C::* func)(nodeEvent_t), C* instance) {
+        auto f = std::bind(func,std::ref(*instance), 
+                                    std::placeholders::_1);
+        _nodeEventHandlers.push_back(f);
+    };
 
     /// @brief Handle all the zb event. It is called by esp_zb_app_signal_handler
     void handleBdbEvent(esp_zb_app_signal_type_t signal_type,
@@ -80,11 +101,11 @@ public:
    
     /// @brief Start Network steering
     /// @param param is not used, it is just to comply with esp_zb_callback_t
-    static esp_err_t joinNetwork(uint8_t param = 0);
+    void joinNetwork();
 
     /// @brief will trigger the device to leave the network
     /// all related infos including the nvs will be deleted
-    static void leaveNetwork();
+    void leaveNetwork();
 
     /// @brief Test if the device is currently connected to network
     /// @return true if device is connected to a network
@@ -156,6 +177,8 @@ protected:
 private:
     /// @brief Constructor is private (singleton)
     ZbNode();
+
+    void postEvent(nodeEvent_t event);
 
 };
 
