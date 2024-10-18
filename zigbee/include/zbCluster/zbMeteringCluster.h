@@ -60,7 +60,7 @@ public:
 
     virtual void addAttribute(uint16_t attr_id, void* value)
     {
-        attr_t attr =  getAttrTypeAndAccess(attr_id);
+        attrType_t attr =  getAttrTypeAndAccess(attr_id);
         ESP_ERROR_CHECK(esp_zb_cluster_add_attr(_attr_list, ESP_ZB_ZCL_CLUSTER_ID_METERING,
                             attr_id, attr.type, attr.access, value));
     }
@@ -75,9 +75,9 @@ private:
     /// @brief get the type and access according to ZCL specification
     /// @param attr_id the id of the attribute
     /// @return a struct with both data, to avoid 2 long switch testing
-    attr_t getAttrTypeAndAccess(uint16_t attr_id)
+    attrType_t getAttrTypeAndAccess(uint16_t attr_id)
     {
-        attr_t attr = { ESP_ZB_ZCL_ATTR_TYPE_INVALID, 
+        attrType_t attr = { ESP_ZB_ZCL_ATTR_TYPE_INVALID, 
                         ESP_ZB_ZCL_ATTR_ACCESS_INTERNAL };
         switch(attr_id)
         {

@@ -185,7 +185,7 @@ void ZbCluster::attributeWasSet(uint16_t attr_id, void* value)
 esp_err_t ZbCluster::attributesWereRead(esp_zb_zcl_read_attr_resp_variable_t* attrs)
 {
     esp_zb_zcl_attr_t* local_attr = nullptr;
- 
+    std::vector<attribute_t> attrToPost;
     while (attrs){
 
         if(attrs->status == ESP_ZB_ZCL_STATUS_SUCCESS)
@@ -209,7 +209,8 @@ esp_err_t ZbCluster::attributesWereRead(esp_zb_zcl_read_attr_resp_variable_t* at
                         ESP_LOGW(ZCL_TAG, "Endpoint (%d), Cluster (%d), read attr id (%d) error setting local value (%x)",
                         _endPoint->getId(), getId(), attrs->attribute.id, ret);
                     else 
-                        postEvent(ATTR_UPDATED_AFTER_READ,local_attr->id, local_attr->data_p);
+                        //postEvent(ATTR_UPDATED_AFTER_READ,local_attr->id, local_attr->data_p);
+                        attrToPost.push_back({local_attr->id, local_attr->data_p});
                 } else { // Read attribute type is not the same as cluster attr type
                     ESP_LOGW(ZCL_TAG, "Endpoint (%d), Cluster (%d), read attr id (%d) is type (%x) as local type is (%x)",
                         _endPoint->getId(), getId(), attrs->attribute.id, attrs->attribute.data.type, local_attr->type );
@@ -224,6 +225,8 @@ esp_err_t ZbCluster::attributesWereRead(esp_zb_zcl_read_attr_resp_variable_t* at
         }
         attrs = attrs->next;
     } // while(attrs)
+
+    postEvent(ATTR_UPDATED_AFTER_READ, attrToPost);
 
     return ESP_OK;
 }
@@ -268,13 +271,19 @@ void ZbCluster::setReporting(uint16_t attr_id)
 }
 
 /// Events ////////////////////////////////////////////////////////////////////////////
-
-
-void ZbCluster::postEvent(clusterEvent_t event, uint16_t attrId, void* value)
+void ZbCluster::postEvent(clusterEvent_t event, std::vector<attribute_t> attrs)
 {
     // Call all the registered callback Id
     for (auto & cb : _clusterEventHandlers) {
         //cb(event, attrId, value);
-        ZbNode::_eventLoop->enqueue(std::bind(std::ref(cb), event, attrId, value));
+        ZbNode::_eventLoop->enqueue(std::bind(std::ref(cb), event, std::move(attrs)));
     }
+}
+
+
+void ZbCluster::postEvent(clusterEvent_t event, uint16_t attrId, void* value)
+{
+    std::vector<attribute_t> oneElement = {{attrId,value}};
+    //std::vector<int> v = {1, 2, 3, 4};
+    postEvent(event,std::move(oneElement));
 }

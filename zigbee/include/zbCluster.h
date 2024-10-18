@@ -17,7 +17,7 @@
 #include "esp_zigbee_core.h"
 
 #include <functional>
-
+#include <utility>
 #include <iostream> // TODEL
 class ZbEndPoint;
 
@@ -33,21 +33,26 @@ public:
         ATTR_UPDATED_REMOTELY
     } clusterEvent_t;
 
+    typedef struct {
+        uint16_t attrId;
+        void* value;
+    }attribute_t;
+
 private:
 
     esp_zb_zcl_cluster_t _cluster;
     ZbEndPoint* _endPoint = nullptr;
 
     /// @brief cluster callback type
-    typedef std::function<void(clusterEvent_t, uint16_t, void*)> clusterCallback_t;
-    //typedef void (*clusterCb)(eventType event, uint16_t attrId, void* value);
+    //typedef std::function<void(clusterEvent_t, uint16_t, void*)> clusterCallback_t;
+    typedef std::function<void(clusterEvent_t, std::vector<attribute_t>)> clusterCallback_t;
     std::vector<clusterCallback_t> _clusterEventHandlers;   
 
 protected:
     esp_zb_attribute_list_t* _attr_list;
 
     /// @brief struct of attribute for returning type and access function
-    struct attr_t {
+    struct attrType_t {
         uint8_t type;
         uint8_t access;
     };
@@ -60,6 +65,8 @@ protected:
     /// @param other the source cluster
     void _copyAttributes(const ZbCluster& other);
     
+    
+    void postEvent(clusterEvent_t event, std::vector<attribute_t> attrs);
     void postEvent(clusterEvent_t event, uint16_t attrId, void* value);
 
 public:
@@ -93,7 +100,7 @@ public:
     uint8_t sendCommand(uint16_t cmd); // TODO add data
 
     /// @brief Send a read attr command on the network
-    /// @param attrLsit list of attr Id to be read
+    /// @param attrLsit list of attr Id to be r²ead
     /// @param dst_endpoint endpoint on the remote device
     /// @param short_addr address of the remote device
     /// @return transaction number
@@ -123,12 +130,19 @@ public:
     /// void(eventType, uint16_t attrId, void* value) 
     /// @param func pointer to the method ex: &Main::clusterHandler
     /// @param instance instance of the object for this handler (ex: this)
+    ///template<typename C, typename... Args>
+    ///void registerEventHandler(void (C::* func)(Args...), C* instance) {
+    ///    _clusterEventHandlers.push_back(std::bind(func,std::ref(*instance),
+    ///       std::placeholders::_1,
+    ///        std::placeholders::_2,
+    ///        std::placeholders::_3));
+    ///};
+
     template<typename C, typename... Args>
     void registerEventHandler(void (C::* func)(Args...), C* instance) {
         _clusterEventHandlers.push_back(std::bind(func,std::ref(*instance),
-            std::placeholders::_1,
-            std::placeholders::_2,
-            std::placeholders::_3));
+                std::placeholders::_1,
+                std::placeholders::_2));
     };
 
     //void registerEventHandler(clusterCallback_t handler);
