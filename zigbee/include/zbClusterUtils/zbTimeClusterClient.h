@@ -15,9 +15,12 @@
 #include <cmath>
 #include <stdlib.h>
 
+#include "scheduledTask.h" // to del
 
-/// @brief Implementing time cluster Client, with automatic synchronisation 
-/// using coordinator
+
+/// @brief Implementing time cluster Client, with automatic synchronization 
+/// using coordinator. Client app shall call syncRTC once, then
+/// the sync process will be trigger every month
 class ZbTimeClusterClient : public ZbTimeCluster
 {
     
@@ -149,6 +152,8 @@ public:
         strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo); 
         ESP_LOGI(TAG_CLUSTER, "Sync finisihed - the Current Local date/time is: %s", strftime_buf);
 
+        //Trigger a new clock sync in one month
+        ScheduledTask* task = new ScheduledTask(&ZbTimeClusterClient::syncRTC, this, 2635200000);
     };
 
 public:

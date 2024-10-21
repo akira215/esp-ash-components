@@ -28,7 +28,7 @@ void ScheduledTask::initAndStartTimer(uint64_t delay_ms, const char* name)
 
     oneshot_timer_args.callback = &timerCallback,
 	oneshot_timer_args.arg      = (void*)this,
-	oneshot_timer_args.name = name;
+	oneshot_timer_args.name     = name;
 			
     ESP_ERROR_CHECK(esp_timer_create(&oneshot_timer_args, &_timer));
 
