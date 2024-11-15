@@ -47,12 +47,13 @@ uint8_t ZbEndPoint::getId()
 void ZbEndPoint::addCluster(ZbCluster* cluster)
 {
     cluster->addToList(_cluster_list);
-    cluster->setEndPoint(this);
     
     if(cluster->isServer())
         _serverClusterMap[cluster->getId()] = cluster;
     else
         _clientClusterMap[cluster->getId()] = cluster;
+
+    cluster->setEndPoint(this);
 }
 
 ZbCluster* ZbEndPoint::getCluster(uint16_t id, bool isClient)

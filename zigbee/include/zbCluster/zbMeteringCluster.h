@@ -82,7 +82,15 @@ private:
         switch(attr_id)
         {
         case ESP_ZB_ZCL_ATTR_METERING_CURRENT_SUMMATION_RECEIVED_ID:
-            attr.type = ESP_ZB_ZCL_ATTR_TYPE_U48;
+            attr.type = ESP_ZB_ZCL_ATTR_TYPE_8BIT_ENUM;
+            attr.access = ESP_ZB_ZCL_ATTR_ACCESS_READ_ONLY;
+            break;
+        case ESP_ZB_ZCL_ATTR_METERING_MULTIPLIER_ID:
+            attr.type = ESP_ZB_ZCL_ATTR_TYPE_U24;
+            attr.access = ESP_ZB_ZCL_ATTR_ACCESS_READ_ONLY;
+            break;
+        case ESP_ZB_ZCL_ATTR_METERING_DIVISOR_ID:
+            attr.type = ESP_ZB_ZCL_ATTR_TYPE_U24;
             attr.access = ESP_ZB_ZCL_ATTR_ACCESS_READ_ONLY;
             break;
         default:

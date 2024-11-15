@@ -179,7 +179,11 @@ uint8_t ZbCluster::readAttribute(uint16_t attrId, uint8_t dst_endpoint,
 
 void ZbCluster::attributeWasSet(uint16_t attr_id, void* value)
 { 
-    postEvent(ATTR_UPDATED_REMOTELY, attr_id, value);
+    std::vector<attribute_t> attrToPost;
+    attrToPost.push_back({attr_id, value});
+    //postEvent(ATTR_UPDATED_REMOTELY, attr_id, value);
+    postEvent(ATTR_UPDATED_REMOTELY, attrToPost);
+    
 }
 
 esp_err_t ZbCluster::attributesWereRead(esp_zb_zcl_read_attr_resp_variable_t* attrs)
