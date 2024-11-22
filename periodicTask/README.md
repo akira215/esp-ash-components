@@ -1,6 +1,6 @@
 # blinkTask value
 
-Blinking task
+Periodic task use hardware timer to do very short periodic task (led blinking, button debounce)
 
 ## Requirements
 

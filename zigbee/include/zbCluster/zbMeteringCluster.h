@@ -93,6 +93,10 @@ private:
             attr.type = ESP_ZB_ZCL_ATTR_TYPE_U24;
             attr.access = ESP_ZB_ZCL_ATTR_ACCESS_READ_ONLY;
             break;
+        case ESP_ZB_ZCL_ATTR_METERING_DEFAULT_UPDATE_PERIOD_ID:
+            attr.type = ESP_ZB_ZCL_ATTR_TYPE_U8;
+            attr.access = ESP_ZB_ZCL_ATTR_ACCESS_READ_ONLY;
+            break;
         default:
             ESP_LOGW("Zb Metering Cluster",
                 "Attribute desc not defined : attr id = %d", attr_id); // TODEL development purpose
