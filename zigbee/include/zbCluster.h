@@ -11,8 +11,11 @@
 #include <list>
 #include <span>
 #include <memory>
-#include <cstring>
 #include <string>
+
+#include <cstring>
+#include <cstdlib>
+
 //#include "esp_event.h"
 #include "esp_zigbee_core.h"
 
@@ -58,6 +61,51 @@ protected:
         uint8_t access;
     };
 
+    // Struct of attr [bytes]
+    // Name         :  size | offset
+    // -----------------------------
+    // Id           :   2   |   0
+    // type         :   1   |   2
+    // Access       :   1   |   3
+    // ManufCode    :   2   |   4
+    // Data P       :   4   |   6  ==> 10 = sizeof(esp_zb_attribute_list_t)
+    // -----------------------------
+    // cluster_id   :   2   |   10
+    // struct*      :   4   |   12
+    // -----------------------------
+    // attr size    :   4   |   16 (shall be = 12 as data is 12 byte)
+    // data @       :   12  |   20 ==> total 36 bytes
+    // -----------------------------
+    // Lost ???     :   4   |   32 
+    // End          :   0   |   36
+ 
+    /// @brief struct to load custom attributes.
+    /// attr_size shall always be equal to 12 bytes
+    typedef struct zbAttribute_s {
+        esp_zb_attribute_list_t   esp_attr_list;     // ESP attribute struct 16 bytes
+        uint32_t                attr_size;   // Padding 4 bytes  
+        char                value[12];      // Attribute value 16 bytes                     
+    } ESP_ZB_PACKED_STRUCT
+    zbAttribute_t;
+
+    /// @brief Build a new attribute with value max 12 bytes
+    /// @return 
+    zbAttribute_t* newZbAttribute (void* value){
+        zbAttribute_t* attr = (zbAttribute_t*)malloc(sizeof(zbAttribute_t));
+        attr->attr_size = 12;
+        // Stupidly copy 12 bytes from source, without checking the type,
+        // as memory has been allocated
+        std::memcpy(&attr->value, value, 12);
+        // setup the pointer to the data as offset is fixed
+        attr->esp_attr_list.attribute.data_p = &attr->value;
+
+        // Could be changed afterward
+        attr->esp_attr_list.next = 0;
+
+        return attr;
+    } 
+
+
 protected:
     void _init(uint16_t id, bool isClient);
 
@@ -77,6 +125,11 @@ public:
     
     /// @brief To be implemented using esp_zb_xxxxx_cluster_add_attr
     virtual void addAttribute(uint16_t attr_id, void* value) = 0;
+
+    /// @brief add a custom attribute to any cluster.
+    /// Value will be copied, no need to alloc memory
+    virtual void addCustomAttribute(uint16_t attr_id, void* value, 
+                    uint8_t attr_type, uint8_t attr_access, uint16_t manuf_code = 0);
     
     /// @brief To be implemented using esp_zb_cluster_list_add_xxxxx_cluster
     virtual void addToList(esp_zb_cluster_list_t* cluster_list) = 0;
@@ -87,7 +140,16 @@ public:
     /// @return point to the esp_zb_zcl_attr_t, nullptr if attr does not exist
     esp_zb_zcl_attr_t* getAttribute(uint16_t attr_id) const;
 
+    /// @brief get the cluster ID
+    /// @return the Cluster ID
     uint16_t getId() const;
+
+    /// @brief get the Endpoint ID
+    /// Cluster shall be attached prior to call this method
+    /// @return the Endpoint ID
+    uint8_t getEndpointId() const;
+
+    
     bool isClient() const;
     bool isServer() const;
 
