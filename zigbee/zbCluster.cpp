@@ -15,6 +15,7 @@
 #include "esp_err.h"
 #include "esp_check.h"
 
+
 static const char *ZCL_TAG = "ZCL_CPP";
 
 
@@ -59,6 +60,77 @@ void ZbCluster::_copyAttributes(const ZbCluster& other)
 
 }
 
+
+void ZbCluster::addCustomAttribute(uint16_t attr_id, void* value, 
+                    uint8_t attr_type, uint8_t attr_access, uint16_t manuf_code)
+{
+    esp_zb_attribute_list_t *head = _attr_list;
+    head = head->next; // skip the head
+    while (head) {
+        std::cout << "head " << (void*)head << 
+                    " | attrId " << (void*)head->attribute.id <<
+                    " | Id @" << (void*)&head->attribute.id <<
+                    " | Type @" << (void*)&head->attribute.type <<
+                    " | Access @" << (void*)&head->attribute.access <<
+                    " | Manuf @" << (void*)&head->attribute.manuf_code <<
+                    " | datap @" << (void*)&head->attribute.data_p <<
+                    " | cl id @" << (void*)&head->cluster_id <<
+                    " | next @" << (void*)&head->next <<
+                    " | reserved @" << *((uint32_t*)(((void*)&head->next)+4)) <<
+                    " | data @ " <<  (void*)head->attribute.data_p << 
+                    //" | data " <<  +(*(uint8_t*)head->attribute.data_p) << "-" <<
+                    // +(*((uint8_t*)head->attribute.data_p+1)) <<
+                    std::endl;
+        if (head->next) {
+            head = head->next;
+        } else {
+            break;
+        }
+    }
+    //head->next = custom_attr; // add new element to list
+    std::cout << "size of struct " << +sizeof(esp_zb_attribute_list_t) << std::endl;
+    std::cout << "head " << (void*)head << " next " <<  (void*)head->next << std::endl;
+
+    //zbAttribute_t* zbAttr = (zbAttribute_t*)malloc(sizeof(zbAttribute_t)); // 36 bytes
+    zbAttribute_t* zbAttr2 = (zbAttribute_t*)malloc(sizeof(zbAttribute_t)); // 36 bytes
+    
+    zbAttribute_t* zbAttr = newZbAttribute(value);
+    zbAttr->esp_attr_list.attribute.id = attr_id;
+    zbAttr->esp_attr_list.attribute.type = attr_type;
+    zbAttr->esp_attr_list.attribute.access = attr_access;
+    
+    if (manuf_code)
+       zbAttr->esp_attr_list.attribute.manuf_code = manuf_code;
+    //zbAttr->esp_attr_list.attribute.data_p = &zbAttr->value;
+    zbAttr->esp_attr_list.cluster_id = getId();
+    //zbAttr->esp_attr_list.next = 0;
+    //zbAttr->attr_size = 12; // 12 bytes of reserve for value
+
+    // Stupidly copy 12 bytes from source, without checking the type,
+    // as we have the alloc the memory
+    //std::memcpy(&zbAttr->value, value, 12);
+
+    std::cout << "zbAttr " << (void*)zbAttr << 
+                " | Id @" << (void*)&zbAttr->esp_attr_list.attribute.id <<
+                " | Type @" << (void*)&zbAttr->esp_attr_list.attribute.type <<
+                " | Access @" << (void*)&zbAttr->esp_attr_list.attribute.access <<
+                " | Manuf @" << (void*)&zbAttr->esp_attr_list.attribute.manuf_code <<
+                " | datap @" << (void*)&zbAttr->esp_attr_list.attribute.data_p <<
+                " | cl id @" << (void*)&zbAttr->esp_attr_list.cluster_id <<
+                " | next @" << (void*)&zbAttr->esp_attr_list.next <<
+                " | size " << +zbAttr->attr_size <<
+                " | data @ " <<  (void*)zbAttr->esp_attr_list.attribute.data_p << 
+                //" | data " <<  +(*(uint8_t*)head->attribute.data_p) << "-" <<
+                // +(*((uint8_t*)head->attribute.data_p+1)) <<
+                std::endl;
+
+    std::cout << "size of zbAttribute_t " << +sizeof(zbAttribute_t) << std::endl;
+    std::cout << "zbAttr " << (void*)zbAttr << " zbAttr2 " <<  (void*)zbAttr2 << std::endl;
+
+    head->next = &(zbAttr->esp_attr_list); // add new element to list
+
+}
+
 esp_zb_zcl_cluster_t* ZbCluster::getClusterStruct()
 {
     return &_cluster;
@@ -84,6 +156,14 @@ uint16_t ZbCluster::getId() const
     return _cluster.cluster_id;  
 }
 
+uint8_t  ZbCluster::getEndpointId() const
+{
+    if(_endPoint)
+        return _endPoint->getId();
+
+    return 0;
+}
+
 bool ZbCluster::isClient() const
 {
     if(_cluster.role_mask == ESP_ZB_ZCL_CLUSTER_CLIENT_ROLE)
@@ -105,7 +185,7 @@ bool ZbCluster::setAttribute(uint16_t attr_id, void* value)
 {
     esp_zb_lock_acquire(portMAX_DELAY);
 
-    esp_zb_zcl_status_t res = esp_zb_zcl_set_attribute_val(_endPoint->getId(),
+    esp_zb_zcl_status_t res = esp_zb_zcl_set_attribute_val(getEndpointId(),
                  getId(), 
                  isClient() ? ESP_ZB_ZCL_CLUSTER_CLIENT_ROLE : 
                                 ESP_ZB_ZCL_CLUSTER_SERVER_ROLE, 
@@ -122,6 +202,26 @@ void ZbCluster::setEndPoint(ZbEndPoint* parent)
     _endPoint = parent;
 }
 
+/*
+void ZbCluster::reportAttribute()
+{
+    std::cout << "Periodic Task "  << +_updatePeriod << std::endl;
+    esp_zb_zcl_report_attr_cmd_t cmd_req;
+    cmd_req.zcl_basic_cmd.dst_addr_u.addr_short = 0x0000;
+    cmd_req.zcl_basic_cmd.src_endpoint = getEndpointId();
+    cmd_req.address_mode = ESP_ZB_APS_ADDR_MODE_16_GROUP_ENDP_NOT_PRESENT; //ESP_ZB_APS_ADDR_MODE_DST_ADDR_ENDP_NOT_PRESENT; //ESP_ZB_APS_ADDR_MODE_16_ENDP_PRESENT;
+    cmd_req.clusterID = getId();
+    cmd_req.attributeID = ESP_ZB_ZCL_ATTR_METERING_CURRENT_SUMMATION_DELIVERED_ID;
+    cmd_req.cluster_role = ESP_ZB_ZCL_CLUSTER_SERVER_ROLE;                  
+    esp_err_t ret;
+    esp_zb_lock_acquire(portMAX_DELAY);
+    ret = esp_zb_zcl_report_attr_cmd_req(&cmd_req);
+    std::cout << "cmd sent "  << +ret << std::endl;
+    esp_zb_lock_release();
+
+}
+*/
+
 uint8_t ZbCluster::sendCommand(uint16_t cmd)
 {
     if(!_endPoint)
@@ -130,7 +230,7 @@ uint8_t ZbCluster::sendCommand(uint16_t cmd)
     esp_zb_zcl_custom_cluster_cmd_req_t cmd_req;
     uint8_t ret;
 
-    cmd_req.zcl_basic_cmd.src_endpoint = _endPoint->getId();
+    cmd_req.zcl_basic_cmd.src_endpoint = getEndpointId();
     cmd_req.address_mode = ESP_ZB_APS_ADDR_MODE_DST_ADDR_ENDP_NOT_PRESENT;
     cmd_req.profile_id = ESP_ZB_AF_HA_PROFILE_ID;
     cmd_req.cluster_id = getId();
