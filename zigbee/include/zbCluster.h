@@ -78,7 +78,7 @@ protected:
     // -----------------------------
     // Lost ???     :   4   |   32 
     // End          :   0   |   36
- 
+/* 
     /// @brief struct to load custom attributes.
     /// attr_size shall always be equal to 12 bytes
     typedef struct zbAttribute_s {
@@ -104,7 +104,7 @@ protected:
 
         return attr;
     } 
-
+*/
 
 protected:
     void _init(uint16_t id, bool isClient);
@@ -129,7 +129,7 @@ public:
     /// @brief add a custom attribute to any cluster.
     /// Value will be copied, no need to alloc memory
     virtual void addCustomAttribute(uint16_t attr_id, void* value, 
-                    uint8_t attr_type, uint8_t attr_access, uint16_t manuf_code = 0);
+                    uint8_t attr_type, uint8_t attr_access);
     
     /// @brief To be implemented using esp_zb_cluster_list_add_xxxxx_cluster
     virtual void addToList(esp_zb_cluster_list_t* cluster_list) = 0;

@@ -62,8 +62,12 @@ void ZbCluster::_copyAttributes(const ZbCluster& other)
 
 
 void ZbCluster::addCustomAttribute(uint16_t attr_id, void* value, 
-                    uint8_t attr_type, uint8_t attr_access, uint16_t manuf_code)
+                    uint8_t attr_type, uint8_t attr_access)
 {
+    ESP_ERROR_CHECK(esp_zb_cluster_add_attr(_attr_list, getId(),
+                            attr_id, attr_type, attr_access, value));
+    
+    
     esp_zb_attribute_list_t *head = _attr_list;
     head = head->next; // skip the head
     while (head) {
@@ -91,43 +95,6 @@ void ZbCluster::addCustomAttribute(uint16_t attr_id, void* value,
     std::cout << "size of struct " << +sizeof(esp_zb_attribute_list_t) << std::endl;
     std::cout << "head " << (void*)head << " next " <<  (void*)head->next << std::endl;
 
-    //zbAttribute_t* zbAttr = (zbAttribute_t*)malloc(sizeof(zbAttribute_t)); // 36 bytes
-    zbAttribute_t* zbAttr2 = (zbAttribute_t*)malloc(sizeof(zbAttribute_t)); // 36 bytes
-    
-    zbAttribute_t* zbAttr = newZbAttribute(value);
-    zbAttr->esp_attr_list.attribute.id = attr_id;
-    zbAttr->esp_attr_list.attribute.type = attr_type;
-    zbAttr->esp_attr_list.attribute.access = attr_access;
-    
-    if (manuf_code)
-       zbAttr->esp_attr_list.attribute.manuf_code = manuf_code;
-    //zbAttr->esp_attr_list.attribute.data_p = &zbAttr->value;
-    zbAttr->esp_attr_list.cluster_id = getId();
-    //zbAttr->esp_attr_list.next = 0;
-    //zbAttr->attr_size = 12; // 12 bytes of reserve for value
-
-    // Stupidly copy 12 bytes from source, without checking the type,
-    // as we have the alloc the memory
-    //std::memcpy(&zbAttr->value, value, 12);
-
-    std::cout << "zbAttr " << (void*)zbAttr << 
-                " | Id @" << (void*)&zbAttr->esp_attr_list.attribute.id <<
-                " | Type @" << (void*)&zbAttr->esp_attr_list.attribute.type <<
-                " | Access @" << (void*)&zbAttr->esp_attr_list.attribute.access <<
-                " | Manuf @" << (void*)&zbAttr->esp_attr_list.attribute.manuf_code <<
-                " | datap @" << (void*)&zbAttr->esp_attr_list.attribute.data_p <<
-                " | cl id @" << (void*)&zbAttr->esp_attr_list.cluster_id <<
-                " | next @" << (void*)&zbAttr->esp_attr_list.next <<
-                " | size " << +zbAttr->attr_size <<
-                " | data @ " <<  (void*)zbAttr->esp_attr_list.attribute.data_p << 
-                //" | data " <<  +(*(uint8_t*)head->attribute.data_p) << "-" <<
-                // +(*((uint8_t*)head->attribute.data_p+1)) <<
-                std::endl;
-
-    std::cout << "size of zbAttribute_t " << +sizeof(zbAttribute_t) << std::endl;
-    std::cout << "zbAttr " << (void*)zbAttr << " zbAttr2 " <<  (void*)zbAttr2 << std::endl;
-
-    head->next = &(zbAttr->esp_attr_list); // add new element to list
 
 }
 

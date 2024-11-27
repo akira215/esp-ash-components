@@ -61,8 +61,10 @@ public:
     virtual void addAttribute(uint16_t attr_id, void* value)
     {
         attrType_t attr =  getAttrTypeAndAccess(attr_id);
-        ESP_ERROR_CHECK(esp_zb_cluster_add_attr(_attr_list, ESP_ZB_ZCL_CLUSTER_ID_METERING,
-                            attr_id, attr.type, attr.access, value));
+        addCustomAttribute(attr_id, value, attr.type, attr.access);
+
+        //ESP_ERROR_CHECK(esp_zb_cluster_add_attr(_attr_list, ESP_ZB_ZCL_CLUSTER_ID_METERING,
+        //                    attr_id, attr.type, attr.access, value));
     }
 
     virtual void addToList(esp_zb_cluster_list_t* cluster_list)
