@@ -66,35 +66,6 @@ void ZbCluster::addCustomAttribute(uint16_t attr_id, void* value,
 {
     ESP_ERROR_CHECK(esp_zb_cluster_add_attr(_attr_list, getId(),
                             attr_id, attr_type, attr_access, value));
-    
-    
-    esp_zb_attribute_list_t *head = _attr_list;
-    head = head->next; // skip the head
-    while (head) {
-        std::cout << "head " << (void*)head << 
-                    " | attrId " << (void*)head->attribute.id <<
-                    " | Id @" << (void*)&head->attribute.id <<
-                    " | Type @" << (void*)&head->attribute.type <<
-                    " | Access @" << (void*)&head->attribute.access <<
-                    " | Manuf @" << (void*)&head->attribute.manuf_code <<
-                    " | datap @" << (void*)&head->attribute.data_p <<
-                    " | cl id @" << (void*)&head->cluster_id <<
-                    " | next @" << (void*)&head->next <<
-                    " | reserved @" << *((uint32_t*)(((void*)&head->next)+4)) <<
-                    " | data @ " <<  (void*)head->attribute.data_p << 
-                    //" | data " <<  +(*(uint8_t*)head->attribute.data_p) << "-" <<
-                    // +(*((uint8_t*)head->attribute.data_p+1)) <<
-                    std::endl;
-        if (head->next) {
-            head = head->next;
-        } else {
-            break;
-        }
-    }
-    //head->next = custom_attr; // add new element to list
-    std::cout << "size of struct " << +sizeof(esp_zb_attribute_list_t) << std::endl;
-    std::cout << "head " << (void*)head << " next " <<  (void*)head->next << std::endl;
-
 
 }
 
@@ -106,6 +77,8 @@ esp_zb_zcl_cluster_t* ZbCluster::getClusterStruct()
 
 esp_zb_zcl_attr_t* ZbCluster::getAttribute(uint16_t attr_id) const
 {
+   // TODO esp_zb_zcl_get_attribute ?????
+    
     esp_zb_attribute_list_t* attr_list = _attr_list->next;
 
     while(attr_list->attribute.id != attr_id){

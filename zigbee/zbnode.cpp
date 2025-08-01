@@ -127,8 +127,8 @@ void ZbNode::handleBdbEvent(esp_zb_app_signal_type_t signal_type,
             // esp_zb_set_node_descriptor_manufacturer_code(uint16_t manufacturer_code);
             ESP_LOGD(ZB_TAG, "Config Ready, status: %s ",esp_err_to_name(status));
             break;
-        case ESP_ZB_SE_SIGNAL_REJOIN:
-            ESP_LOGD(ZB_TAG, "Device Rejoin: %s ",esp_err_to_name(status));
+        case ESP_ZB_ZDO_SIGNAL_DEVICE_ANNCE: //ESP_ZB_SE_SIGNAL_REJOIN:
+            ESP_LOGD(ZB_TAG, "Device join or rejoin: %s ",esp_err_to_name(status));
             break;
         case ESP_ZB_NLME_STATUS_INDICATION:
             handleNetworkStatus(status, static_cast<void*>(p_data));
