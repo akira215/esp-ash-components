@@ -34,7 +34,8 @@ class ZbCluster
 public:
     typedef enum {
         ATTR_UPDATED_AFTER_READ    = 0x00,
-        ATTR_UPDATED_REMOTELY
+        ATTR_UPDATED_REMOTELY,
+        ATTR_REPORTED
     } clusterEvent_t;
 
     typedef struct {
@@ -160,6 +161,9 @@ public:
     void attributeWasSet(uint16_t attr_id, void* value);
     bool setAttribute(uint16_t attr_id, void* value);
 
+    // cmd that initiated the event from external device
+    void defaultCommandTriggered(uint8_t cmd);
+
     uint8_t sendCommand(uint16_t cmd); // TODO add data
 
     /// @brief Send a read attr command on the network
@@ -184,8 +188,13 @@ public:
     esp_err_t attributesWereRead(esp_zb_zcl_read_attr_resp_variable_t* readAttrs);
 
 
-
-    void setReporting(uint16_t attr_id);
+    /// @brief Set reporting of an attribute
+    /// @param attrId the Id of the attribute to be read
+    /// @param reportable_change value for wich report will be trigger after at least min_interval
+    /// @param min_interval min interval between 2 reports whatever value change occured
+    /// @param max_interval max interval for the next report whatever value change occured
+    void setReporting(uint16_t attr_id, void* reportable_change, uint16_t min_interval = 60, 
+                        uint16_t max_interval = 3600);
 
 
     /// @brief register event handler for this cluster.

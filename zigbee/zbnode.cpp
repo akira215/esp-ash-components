@@ -319,11 +319,30 @@ esp_err_t ZbNode::handlingCmdDefaultResp(const esp_zb_zcl_cmd_default_resp_messa
     ESP_RETURN_ON_FALSE(msg->info.status == ESP_ZB_ZCL_STATUS_SUCCESS, ESP_ERR_INVALID_ARG, 
                         ZB_TAG, "Default response received message: error status(%d)",
                         msg->info.status);
-    ESP_LOGD(ZB_TAG, "Default response status(%d) from src endpoint(%d) cluster(0x%x) cmd was(%d)", 
+    ESP_LOGD(ZB_TAG, "Default response status(%d) from src endpoint(%d) cluster(0x%x) cmd was(0x%x)", 
                         msg->status_code,
                         msg->info.src_endpoint, 
                         msg->info.cluster, 
+                        //msg->info.command.id);
                         msg->resp_to_cmd);
+    
+    auto it = _endPointMap.find(msg->info.dst_endpoint);
+    if (it == _endPointMap.end()){
+        ESP_LOGW(ZB_TAG, "Default Resp - No endpoint %d found", msg->info.dst_endpoint);
+        return ESP_ERR_NOT_FOUND;
+    }
+
+    ZbCluster* cluster = it->second->getCluster(msg->info.cluster, false);
+    if (!cluster){
+        ESP_LOGW(ZB_TAG, "Default Resp - No cluster %d found for endpoint %d", 
+                        msg->info.cluster, msg->info.dst_endpoint);
+        return ESP_ERR_NOT_FOUND;
+    }
+
+    ESP_LOGW(ZB_TAG, "Default Resp - command id (%d) direction (%d) is_common (%d)", 
+                        msg->info.command.id, msg->info.command.direction, msg->info.command.is_common);
+    cluster->defaultCommandTriggered(msg->resp_to_cmd);
+
     return ESP_OK;   
 }
 
@@ -410,7 +429,7 @@ esp_err_t ZbNode::handleZbActions(esp_zb_core_action_callback_id_t callback_id,
         break;
         */
     default:
-        ESP_LOGW(ZB_TAG, "Receive Zigbee action(0x%x) callback", callback_id);
+        ESP_LOGW(ZB_TAG, "Receive Zigbee action(0x%x) Unregistred Callback -> Add a Callback in ZbNode::handleZbActions", callback_id);
         break;
     }
     return ret;

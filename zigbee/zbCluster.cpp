@@ -77,24 +77,46 @@ esp_zb_zcl_cluster_t* ZbCluster::getClusterStruct()
 
 esp_zb_zcl_attr_t* ZbCluster::getAttribute(uint16_t attr_id) const
 {
-   // TODO esp_zb_zcl_get_attribute ?????
-    
-    esp_zb_attribute_list_t* attr_list = _attr_list->next;
+  
+    if (getEndpointId()) {
+        // If cluster mounted on endpoint, search attribute 
+        // using builtin library esp_zb_zcl_get_attribute
+        esp_zb_zcl_attr_t* attr = esp_zb_zcl_get_attribute(getEndpointId(),
+                        getId(), ESP_ZB_ZCL_CLUSTER_SERVER_ROLE, attr_id);
+        return attr;
+    } else {
+        // Need to search attribute even without Endpoint (ZbCluster copy constructor)
+        esp_zb_attribute_list_t* attr_list = _attr_list->next;
 
-    while(attr_list->attribute.id != attr_id){
-        attr_list = attr_list->next;
-
-        if(!attr_list)
+        if (attr_list == nullptr)
+        {
+            ESP_LOGW("ZbCluster", "getAttribute error, attribute list is empty,Endpoint %d - Cluster %d - attrId %d",
+                    getEndpointId(),getId(), attr_id);
             return nullptr;
+        }
+
+        while(attr_list->attribute.id != attr_id){
+            attr_list = attr_list->next;
+
+            if(!attr_list){
+                ESP_LOGW("ZbCluster", "getAttribute error, attribute not found,Endpoint %d - Cluster %d - attrId %d",
+                    getEndpointId(),getId(), attr_id);
+                return nullptr;
+            }
+        }
+
+        return &(attr_list->attribute);
     }
 
-    return &(attr_list->attribute);
+    return nullptr; // Should never reach here
+    
 }
 
 uint16_t ZbCluster::getId() const
 {
     return _cluster.cluster_id;  
 }
+
 
 uint8_t  ZbCluster::getEndpointId() const
 {
@@ -193,7 +215,7 @@ uint8_t ZbCluster::readAttribute(std::span<uint16_t> attrList, uint8_t dst_endpo
 
     cmd_req.zcl_basic_cmd.dst_addr_u.addr_short = short_addr;
     cmd_req.zcl_basic_cmd.dst_endpoint = dst_endpoint;
-    cmd_req.zcl_basic_cmd.src_endpoint = _endPoint->getId();
+    cmd_req.zcl_basic_cmd.src_endpoint = getEndpointId();
 
     cmd_req.address_mode = ESP_ZB_APS_ADDR_MODE_16_ENDP_PRESENT;
     
@@ -226,6 +248,19 @@ void ZbCluster::attributeWasSet(uint16_t attr_id, void* value)
     
 }
 
+void ZbCluster::defaultCommandTriggered(uint8_t cmd)
+{
+    switch (cmd){
+        case 0x0a: // Report Attribute command
+            postEvent(ATTR_REPORTED, 0, 0);
+            break; 
+        default:
+            ESP_LOGW(ZCL_TAG, "defaultCommandTriggered with cmd(0x%x) - Add action in ZbCluster - defaultCommandTriggered", cmd);
+            break;
+    }
+
+}
+
 esp_err_t ZbCluster::attributesWereRead(esp_zb_zcl_read_attr_resp_variable_t* attrs)
 {
     esp_zb_zcl_attr_t* local_attr = nullptr;
@@ -235,7 +270,7 @@ esp_err_t ZbCluster::attributesWereRead(esp_zb_zcl_read_attr_resp_variable_t* at
         if(attrs->status == ESP_ZB_ZCL_STATUS_SUCCESS)
         {
             // look up if the attribute exist in this cluster
-            local_attr = esp_zb_zcl_get_attribute(_endPoint->getId(), 
+            local_attr = esp_zb_zcl_get_attribute(getEndpointId(), 
                                 getId(),
                                 isClient() ? ESP_ZB_ZCL_CLUSTER_CLIENT_ROLE : 
                                                 ESP_ZB_ZCL_CLUSTER_SERVER_ROLE,
@@ -243,7 +278,7 @@ esp_err_t ZbCluster::attributesWereRead(esp_zb_zcl_read_attr_resp_variable_t* at
             if(local_attr){
                 if(local_attr->type == attrs->attribute.data.type){
                     //everything is fine, setup the value locally
-                    esp_zb_zcl_status_t ret = esp_zb_zcl_set_attribute_val(_endPoint->getId(),
+                    esp_zb_zcl_status_t ret = esp_zb_zcl_set_attribute_val(getEndpointId(),
                                 getId(),
                                 isClient() ? ESP_ZB_ZCL_CLUSTER_CLIENT_ROLE : ESP_ZB_ZCL_CLUSTER_SERVER_ROLE, 
                                 local_attr->id, 
@@ -251,21 +286,21 @@ esp_err_t ZbCluster::attributesWereRead(esp_zb_zcl_read_attr_resp_variable_t* at
                                 false);
                     if(ret != ESP_ZB_ZCL_STATUS_SUCCESS)
                         ESP_LOGW(ZCL_TAG, "Endpoint (%d), Cluster (%d), read attr id (%d) error setting local value (%x)",
-                        _endPoint->getId(), getId(), attrs->attribute.id, ret);
+                        getEndpointId(), getId(), attrs->attribute.id, ret);
                     else 
                         //postEvent(ATTR_UPDATED_AFTER_READ,local_attr->id, local_attr->data_p);
                         attrToPost.push_back({local_attr->id, local_attr->data_p});
                 } else { // Read attribute type is not the same as cluster attr type
                     ESP_LOGW(ZCL_TAG, "Endpoint (%d), Cluster (%d), read attr id (%d) is type (%x) as local type is (%x)",
-                        _endPoint->getId(), getId(), attrs->attribute.id, attrs->attribute.data.type, local_attr->type );
+                        getEndpointId(), getId(), attrs->attribute.id, attrs->attribute.data.type, local_attr->type );
                 }
             } else {  // attr don't exist
                 ESP_LOGW(ZCL_TAG, "Endpoint (%d), Cluster (%d), read attr id (%d): attr doesn't locally exist",
-                        _endPoint->getId(), getId(), attrs->attribute.id);
+                        getEndpointId(), getId(), attrs->attribute.id);
             }
         } else {
             ESP_LOGW(ZCL_TAG, "Endpoint (%d), Cluster (%d), read attr id (%d): error status(%d)",
-                        _endPoint->getId(), getId(), attrs->attribute.id, attrs->status);
+                        getEndpointId(), getId(), attrs->attribute.id, attrs->status);
         }
         attrs = attrs->next;
     } // while(attrs)
@@ -275,43 +310,42 @@ esp_err_t ZbCluster::attributesWereRead(esp_zb_zcl_read_attr_resp_variable_t* at
     return ESP_OK;
 }
 
-void ZbCluster::setReporting(uint16_t attr_id)
+
+// TODO Implement
+void ZbCluster::setReporting(uint16_t attr_id, void* reportable_change, uint16_t min_interval, 
+                        uint16_t max_interval )
 {
-//uint8_t esp_zb_zcl_config_report_cmd_req(esp_zb_zcl_config_report_cmd_t *cmd_req)
-//esp_zb_zcl_reporting_info_t *esp_zb_zcl_find_reporting_info(esp_zb_zcl_attr_location_info_t attr_info);
-    esp_zb_zcl_config_report_cmd_t report;
-
-    report.address_mode = ESP_ZB_APS_ADDR_MODE_DST_ADDR_ENDP_NOT_PRESENT;
-    report.clusterID = getId();
+    esp_zb_zcl_attr_t* attr = getAttribute(attr_id);
+    if (attr == nullptr) {
+        ESP_LOGW(ZCL_TAG, "Unable to setReporting, Endpoint (%d), Cluster (%d),  attr id (%d) doesn't exist",
+            getEndpointId(), getId(), attr_id);
+        return;
+    }
     
+    esp_zb_zcl_config_report_cmd_t report_cmd;
 
-
-    uint8_t esp_zb_zcl_config_report_cmd_req(esp_zb_zcl_config_report_cmd_t *cmd_req);
-
-
+    //report_cmd.zcl_basic_cmd.dst_addr_u.addr_short = esp_zb_get_short_address();
+    report_cmd.zcl_basic_cmd.dst_addr_u.addr_short = 0x0000; // Coordinator
+    report_cmd.zcl_basic_cmd.dst_endpoint = getEndpointId();
+    report_cmd.zcl_basic_cmd.src_endpoint = getEndpointId();
+    report_cmd.address_mode = ESP_ZB_APS_ADDR_MODE_DST_ADDR_ENDP_NOT_PRESENT;
+    report_cmd.clusterID = getId();
     
-    // Config the reporting info
-    /*
-    esp_zb_zcl_reporting_info_t reporting_info;
-    reporting_info.direction = ESP_ZB_ZCL_REPORT_DIRECTION_SEND;
-    reporting_info.ep = _endPoint->getId();
-    reporting_info.cluster_id = getId();
-    reporting_info.cluster_role = isClient() ?  ESP_ZB_ZCL_CLUSTER_CLIENT_ROLE :
-                                                ESP_ZB_ZCL_CLUSTER_SERVER_ROLE;
-    reporting_info.attr_id = attr_id;
+    esp_zb_zcl_config_report_record_t record;
     
-    reporting_info.u.send_info.min_interval = 1;
-    reporting_info.u.send_info.max_interval = 670;
-    reporting_info.u.send_info.def_min_interval = 1;
-    reporting_info.u.send_info.def_max_interval = 960;
-    reporting_info.u.send_info.delta.u16 = 100;
-    
-    reporting_info.dst.profile_id = ESP_ZB_AF_HA_PROFILE_ID;
-    reporting_info.manuf_code = ESP_ZB_ZCL_ATTR_NON_MANUFACTURER_SPECIFIC;
+    record.direction = ESP_ZB_ZCL_REPORT_DIRECTION_SEND;
+    record.attributeID = attr_id;
+    record.attrType = attr->type;
+    record.min_interval = min_interval;
+    record.max_interval = max_interval;
+    record.reportable_change = reportable_change;
 
-    esp_zb_zcl_update_reporting_info(&reporting_info);   
-*/
-    //esp_zb_zcl_config_report_cmd_req();
+    report_cmd.record_number = 1;
+    report_cmd.record_field = &record;
+
+    esp_zb_lock_acquire(portMAX_DELAY);
+    esp_zb_zcl_config_report_cmd_req(&report_cmd);
+    esp_zb_lock_release();
 }
 
 /// Events ////////////////////////////////////////////////////////////////////////////

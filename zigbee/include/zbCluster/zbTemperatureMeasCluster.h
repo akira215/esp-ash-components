@@ -30,7 +30,7 @@ public:
     }
 
     ///@brief Copy constructor
-     ZbTemperatureMeasCluster(const  ZbTemperatureMeasCluster& other)
+     ZbTemperatureMeasCluster(const ZbTemperatureMeasCluster& other)
     {
         esp_zb_temperature_meas_cluster_cfg_t cfg;
         cfg.measured_value = *((uint16_t*)(other.getAttribute((uint16_t)
