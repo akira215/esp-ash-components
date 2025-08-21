@@ -37,7 +37,7 @@ could be reported to try to improve it.
 
 #include "cppgpio.h"
 #include "cppi2c.h"
-#include "cppads1115.h"
+#include "ads1115.h"
 
 // Main class used for testing only
 class Main final

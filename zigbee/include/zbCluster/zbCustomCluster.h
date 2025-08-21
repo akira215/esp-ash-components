@@ -8,7 +8,8 @@
 #pragma once
 
 #include "zbCluster.h"
-//#include "zcl\esp_zigbee_zcl_basic.h"
+
+#include <esp_log.h> // TODEL development purpose
 
 class ZbCustomCluster : public ZbCluster
 {
@@ -55,5 +56,22 @@ public:
             isClient() ? ESP_ZB_ZCL_CLUSTER_CLIENT_ROLE : ESP_ZB_ZCL_CLUSTER_SERVER_ROLE));
     }
 
+private:
+    /// @brief get the type and access according to ZCL specification
+    /// @param attr_id the id of the attribute
+    /// @return a struct with both data, to avoid 2 long switch testing
+    attrType_t getAttrTypeAndAccess(uint16_t attr_id)
+    {
+        attrType_t attr = { ESP_ZB_ZCL_ATTR_TYPE_INVALID, 
+                        ESP_ZB_ZCL_ATTR_ACCESS_INTERNAL };
+        switch(attr_id)
+        {
+        default:
+            ESP_LOGW("ZbPressureMeasCluster",
+                "Attribute desc not defined : attr id = %d", attr_id); // TODEL development purpose
+            break;
+        }
+        return attr;
+    }
    
 };

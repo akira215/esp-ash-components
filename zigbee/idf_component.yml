@@ -7,7 +7,7 @@ dependencies:
   ## Required IDF version
   idf:
     version: ">=5.0.0"
-version: "0.1.0"
+version: 0.1.0
 description: "C++ Zigbee implementation"
 license: "MIT"
 tags:
