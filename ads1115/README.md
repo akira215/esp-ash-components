@@ -48,7 +48,7 @@ public:
     void setup(void);
 
     // Event handler when conversion is received
-    static void ads1115_event_handler(uint16_t input, int16_t value);
+    static void ads1115_event_handler(uint16_t input, double value);
     
 private:
     I2c i2c_master;
@@ -83,6 +83,13 @@ static const char *TAG = "Main_app";
 #define GPIO_INPUT_IO_READY         CONFIG_ADS1115_READY_INT   //!< GPIO number connect to the ready pin of the converter
 
 Main App;
+
+// Static event_handler
+void Main::ads1115_event_handler(uint16_t input, double value)
+{
+    ESP_LOGI(TAG, "Callback Main Ads1115 input : %d", input);
+    ESP_LOGI(TAG, "Callback Main Ads1115 value : %d", value);
+}
 
 Main::Main(): 
         i2c_master(I2C_MASTER_NUM, I2C_MASTER_SDA_IO, I2C_MASTER_SCL_IO, true),
@@ -159,12 +166,6 @@ void Main::setup(void)
 
     regData = ads.readRegister(Ads1115::reg_hi_thresh);
     ESP_LOGI(TAG, "Reg Hi Thresh : %x", regData.reg);
-}
-
-void Main::ads1115_event_handler(uint16_t input, int16_t value)
-{
-    ESP_LOGI(TAG, "Callback Main Ads1115 input : %d", input);
-    ESP_LOGI(TAG, "Callback Main Ads1115 value : %d", value);
 }
 
 extern "C" void app_main(void)

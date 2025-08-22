@@ -18,6 +18,8 @@
 
 static const char *ADS_TAG = "ADS1115";
 
+
+// Static
 void Ads1115::event_handler(void *handler_args, esp_event_base_t base, int32_t id, void *event_data)
 {
     // target pointer address has been copied by the post function
