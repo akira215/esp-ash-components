@@ -13,10 +13,6 @@
 
 #include <esp_err.h>
 
-/* ESP32 Specifics ------------------------------- */
-#define ADS1115_DEBUG_LEVEL ESP_LOG_DEBUG
-
-
 class Ads1115
 {
     public:
@@ -155,7 +151,12 @@ class Ads1115
         /// @brief This method trigger a conversion with current config
         /// @param inputs : the multiplexer setting for this conversion
         /// @return the voltage in Volt, if Ready pin is not set, otherwise 0
-        double      getVoltage(mux_t inputs);
+        double getVoltage(mux_t inputs);
+
+        /// @brief Return the number of tick to wait to get the conversion ready
+        /// @brief typical usage is vTaskDelay(ads.tickToWait());
+        /// @return Return the number of tick to wait to get the conversion ready
+        TickType_t tickToWait();
 
         /// @brief Test if the device is busy, reading the OS bit of the 
         /// configuration register on the device

@@ -21,7 +21,7 @@
 
 //#include "ha/esp_zigbee_ha_standard.h"
 
-#include "esp_log.h"
+// #include "esp_log.h"
 
 
 #if !defined ZB_ED_ROLE

@@ -15,7 +15,7 @@
 class ZbPressureMeasCluster : public ZbCluster
 {
         // ********************************************
-        // Tipo iussues in ESP_ZB_ZCL_PATTR_RESSURE_MEASUREMENT_MIN_VALUE_DEFAULT_VALUE 
+        // Typo iussues in ESP_ZB_ZCL_PATTR_RESSURE_MEASUREMENT_MIN_VALUE_DEFAULT_VALUE 
         // and MAX. Shall be corrected in next release
         //  ********************************************
 public:

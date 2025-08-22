@@ -47,7 +47,8 @@ void Ads1115::event_handler(void *handler_args, esp_event_base_t base, int32_t i
 
 Ads1115::Ads1115(I2c* i2c_master, Ads1115::addr_t dev_address,uint32_t clk_speed)
 {
-    esp_log_level_set(ADS_TAG, ADS1115_DEBUG_LEVEL);
+
+
     _i2c_master = i2c_master;
     _dev_handle = _i2c_master->addDevice(dev_address, clk_speed);
 
@@ -62,7 +63,10 @@ Ads1115::Ads1115(I2c* i2c_master, Ads1115::addr_t dev_address,uint32_t clk_speed
     _config.bit.COMP_QUE = 0b11;
 
     _useReadyPin = false;
-    _readyGpio = GPIO_NUM_NC;
+
+    // For unknown reason this trigger GPIO Mask error 
+    // as well as interrupt error
+    //_readyGpio = GPIO_NUM_NC;
 
     _cfg_changed = true;
     _intArgs = new intrArgs;
@@ -189,7 +193,6 @@ void Ads1115::removeReadyPin() {
 }
 
 uint16_t Ads1115::getRaw(Ads1115::mux_t inputs) {
-    const static uint16_t sps[] = {8,16,32,64,128,250,475,860};
     esp_err_t err;
     
     _intArgs->config = &_config;
@@ -204,7 +207,7 @@ uint16_t Ads1115::getRaw(Ads1115::mux_t inputs) {
 
     if(!_useReadyPin) {
         // wait for 1 ms longer than the sampling rate, plus a little bit for rounding
-        vTaskDelay((((1000/sps[_config.bit.DR]) + 1) / portTICK_PERIOD_MS)+1);
+        vTaskDelay(tickToWait());
         
         while(isBusy()){ // Block until read the answer
             ESP_LOGE(ADS_TAG,"Device is busy - retrying in 1ms");
@@ -216,6 +219,14 @@ uint16_t Ads1115::getRaw(Ads1115::mux_t inputs) {
     }
 
     return 0;
+}
+
+TickType_t Ads1115::tickToWait()
+{
+    const static uint16_t sps[] = {8,16,32,64,128,250,475,860};
+    //return (TickType_t)((((1000/sps[_config.bit.DR]) + 1) / portTICK_PERIOD_MS)+1);
+    return (TickType_t)(pdMS_TO_TICKS(((1000/sps[_config.bit.DR]) + 1)) + 2);
+
 }
 
 double Ads1115::getVoltage(Ads1115::mux_t inputs) {

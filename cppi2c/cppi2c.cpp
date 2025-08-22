@@ -71,8 +71,6 @@ i2c_master_dev_handle_t I2c::addDevice(uint16_t device_address,
     dev_cfg.scl_wait_us = timeout_us;
     dev_cfg.flags.disable_ack_check = disable_ack_check;
 
-
-
     i2c_master_dev_handle_t dev_handle;
     ESP_ERROR_CHECK(i2c_master_bus_add_device(_bus_handle, &dev_cfg, &dev_handle));
 

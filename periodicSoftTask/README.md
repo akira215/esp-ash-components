@@ -31,8 +31,10 @@ use std::bind to pass argument to callback if required
 
 ```cpp
 
-PeriodicSoftTask* task = new PeriodicSoftTask(&ZbNode::joinNetwork, this, delay_ms);
+PeriodicSoftTask* task = new PeriodicSoftTask(&Main::triggerTask, this, delay_ms);
 ```
+
+`Main::triggerTask` is not required to be `static` and class member could be accessed normally
 
 ## Changes
 
