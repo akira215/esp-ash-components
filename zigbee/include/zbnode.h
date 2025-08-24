@@ -28,6 +28,8 @@
 #endif
 */
 
+static const char *ZNODE_TAG = "ZbNode";
+
 #define INSTALLCODE_POLICY_ENABLE       false   /* enable the install code policy for security */
 #define ED_MAX_CHILDREN                 10
 #define ED_AGING_TIMEOUT                ESP_ZB_ED_AGING_TIMEOUT_64MIN

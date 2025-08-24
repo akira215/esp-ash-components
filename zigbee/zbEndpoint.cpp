@@ -7,8 +7,12 @@
   Zigbee End Point Class
 */
 
+#define LOG_LOCAL_LEVEL ESP_LOG_VERBOSE
+#include <esp_log.h>
+
 #include "zbEndpoint.h"
 
+static const char *ZEP_TAG = "ZbEndpoint";
 
 ZbEndPoint::ZbEndPoint(uint8_t id, uint16_t device_id,
                     uint16_t profile_id, uint32_t device_version)
@@ -46,6 +50,8 @@ uint8_t ZbEndPoint::getId()
 
 void ZbEndPoint::addCluster(ZbCluster* cluster)
 {
+    ESP_LOGV(ZEP_TAG, "Adding Cluster Id: %d", cluster->getId());
+
     cluster->addToList(_cluster_list);
     
     if(cluster->isServer())

@@ -11,7 +11,7 @@
 
 #include <esp_log.h>
 
-static const char *TAG = "ZB_APS";
+static const char *TAG = "ZbAps";
 
 ZbApsData* ZbApsData::getInstance()
 {

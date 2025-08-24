@@ -4,7 +4,7 @@
   License: GNU GENERAL PUBLIC LICENSE Version 3, 29 June 2007
   Author: Akira Shimahara
 
-  Zigbee End Point Class
+  Zigbee Cluster Class
 */
 #include "zbEndpoint.h"
 #include "zbCluster.h"
@@ -16,7 +16,7 @@
 #include "esp_check.h"
 
 
-static const char *ZCL_TAG = "ZCL_CPP";
+//static const char *ZCLUSTER_TAG = "ZCL_CPP";
 
 
 
@@ -145,6 +145,9 @@ bool ZbCluster::isServer() const
 
 bool ZbCluster::setAttribute(uint16_t attr_id, void* value)
 {
+    ESP_LOGV(ZCLUSTER_TAG, "setAttribute Endpoint (%d), Cluster (%d), attr (%d)",
+            getEndpointId(), getId(), attr_id);
+    
     esp_zb_lock_acquire(portMAX_DELAY);
 
     esp_zb_zcl_status_t res = esp_zb_zcl_set_attribute_val(getEndpointId(),
@@ -161,6 +164,8 @@ bool ZbCluster::setAttribute(uint16_t attr_id, void* value)
 
 void ZbCluster::setEndPoint(ZbEndPoint* parent)
 {
+    ESP_LOGV(ZCLUSTER_TAG, "setEndPoint Endpoint (%d), Cluster (%d)",
+                                            parent, getId());
     _endPoint = parent;
 }
 
@@ -255,7 +260,7 @@ void ZbCluster::defaultCommandTriggered(uint8_t cmd)
             postEvent(ATTR_REPORTED, 0, 0);
             break; 
         default:
-            ESP_LOGW(ZCL_TAG, "defaultCommandTriggered with cmd(0x%x) - Add action in ZbCluster - defaultCommandTriggered", cmd);
+            ESP_LOGW(ZCLUSTER_TAG, "defaultCommandTriggered with cmd(0x%x) - Add action in ZbCluster - defaultCommandTriggered", cmd);
             break;
     }
 
@@ -285,21 +290,21 @@ esp_err_t ZbCluster::attributesWereRead(esp_zb_zcl_read_attr_resp_variable_t* at
                                 attrs->attribute.data.value, 
                                 false);
                     if(ret != ESP_ZB_ZCL_STATUS_SUCCESS)
-                        ESP_LOGW(ZCL_TAG, "Endpoint (%d), Cluster (%d), read attr id (%d) error setting local value (%x)",
+                        ESP_LOGW(ZCLUSTER_TAG, "Endpoint (%d), Cluster (%d), read attr id (%d) error setting local value (%x)",
                         getEndpointId(), getId(), attrs->attribute.id, ret);
                     else 
                         //postEvent(ATTR_UPDATED_AFTER_READ,local_attr->id, local_attr->data_p);
                         attrToPost.push_back({local_attr->id, local_attr->data_p});
                 } else { // Read attribute type is not the same as cluster attr type
-                    ESP_LOGW(ZCL_TAG, "Endpoint (%d), Cluster (%d), read attr id (%d) is type (%x) as local type is (%x)",
+                    ESP_LOGW(ZCLUSTER_TAG, "Endpoint (%d), Cluster (%d), read attr id (%d) is type (%x) as local type is (%x)",
                         getEndpointId(), getId(), attrs->attribute.id, attrs->attribute.data.type, local_attr->type );
                 }
             } else {  // attr don't exist
-                ESP_LOGW(ZCL_TAG, "Endpoint (%d), Cluster (%d), read attr id (%d): attr doesn't locally exist",
+                ESP_LOGW(ZCLUSTER_TAG, "Endpoint (%d), Cluster (%d), read attr id (%d): attr doesn't locally exist",
                         getEndpointId(), getId(), attrs->attribute.id);
             }
         } else {
-            ESP_LOGW(ZCL_TAG, "Endpoint (%d), Cluster (%d), read attr id (%d): error status(%d)",
+            ESP_LOGW(ZCLUSTER_TAG, "Endpoint (%d), Cluster (%d), read attr id (%d): error status(%d)",
                         getEndpointId(), getId(), attrs->attribute.id, attrs->status);
         }
         attrs = attrs->next;
@@ -317,7 +322,7 @@ void ZbCluster::setReporting(uint16_t attr_id, void* reportable_change, uint16_t
 {
     esp_zb_zcl_attr_t* attr = getAttribute(attr_id);
     if (attr == nullptr) {
-        ESP_LOGW(ZCL_TAG, "Unable to setReporting, Endpoint (%d), Cluster (%d),  attr id (%d) doesn't exist",
+        ESP_LOGW(ZCLUSTER_TAG, "Unable to setReporting, Endpoint (%d), Cluster (%d),  attr id (%d) doesn't exist",
             getEndpointId(), getId(), attr_id);
         return;
     }

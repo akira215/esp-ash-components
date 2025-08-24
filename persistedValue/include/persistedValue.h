@@ -7,12 +7,18 @@
 
 #pragma once
 
+#define LOG_LOCAL_LEVEL ESP_LOG_VERBOSE
+#include <esp_log.h>
+
+
 #include "freertos/FreeRTOS.h"
 #include "nvs.h"
 #include "nvs_flash.h"
 #include <string>
 #include <cstdlib>
-#include <esp_log.h>
+
+
+static const char *PERSISTED_TAG = "PersistedValue";
 
 template<class T>
 class PersistedValue
@@ -25,10 +31,11 @@ public:
     PersistedValue(const std::string& name, T value = 0, const std::string& namesp = std::string("nvs")):
                 _value(value), _key(name) {
         ESP_ERROR_CHECK(nvs_flash_init());
+        ESP_LOGV(PERSISTED_TAG,"Opening nvs namespace %s", namesp.c_str());
         ESP_ERROR_CHECK(nvs_open(namesp.c_str(), NVS_READWRITE, &_handle));
         esp_err_t err = readValue(&_value);
         if (err!=ESP_OK)
-            ESP_LOGW("PersistedValue","Error during reading NVS - Error:%d ", err);
+            ESP_LOGW(PERSISTED_TAG,"Error during reading NVS - Error:%d ", err);
     }
     ~PersistedValue(){
         save();
@@ -43,7 +50,7 @@ public:
             ESP_ERROR_CHECK(writeValue());
             ESP_ERROR_CHECK(nvs_commit(_handle));
         } else
-            ESP_LOGI("PersistedValue","Same value on NVS, nothing to write");
+            ESP_LOGI(PERSISTED_TAG,"Same value on NVS, nothing to write");
     }
 
     T getValue() { return _value;}
@@ -59,11 +66,13 @@ public:
 
 private:
     esp_err_t readValue(T* res){
+        ESP_LOGV(PERSISTED_TAG,"Reading value %s", _key.c_str());
         size_t len  = sizeof(T);
         return nvs_get_blob(_handle, _key.c_str(), (void*)(res), &len);
     }
     esp_err_t writeValue(){
-         return nvs_set_blob(_handle, _key.c_str(), (void*)(&_value), sizeof(T));
+        ESP_LOGV(PERSISTED_TAG,"Writing value %s", _key.c_str());
+        return nvs_set_blob(_handle, _key.c_str(), (void*)(&_value), sizeof(T));
     }
 
 }; // PersistedValue Class

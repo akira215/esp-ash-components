@@ -24,7 +24,7 @@
 #include <iostream> // TODEL
 class ZbEndPoint;
 
-static const char *TAG_CLUSTER = "ZbCluster";
+static const char *ZCLUSTER_TAG = "ZbCluster";
 
 //TODO unregister handler
 //TODO implement custom event loop for Zigbee

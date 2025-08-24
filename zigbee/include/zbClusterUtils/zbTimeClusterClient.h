@@ -13,7 +13,16 @@
 #include <format>
 #include <string>
 #include <cmath>
+
 #include <stdlib.h>
+#include <stdio.h>
+#include <sys/time.h>
+#include <time.h>
+/*
+#include <stdlib.h>
+#include <sys/time.h>
+#include "freertos/FreeRTOS.h"
+*/
 
 #include "scheduledTask.h" // to del
 
@@ -47,7 +56,7 @@ public:
             uint16_t attrId = el.attrId;
             void* value = el.value;
 
-            ESP_LOGD(TAG_CLUSTER, "Time cluster event type %x attribute %x", event, attrId);
+            ESP_LOGD(ZCLUSTER_TAG, "Time cluster event type %x attribute %x", event, attrId);
    
             switch(attrId){
                 case ESP_ZB_ZCL_ATTR_TIME_TIME_ID:{
@@ -55,21 +64,21 @@ public:
                     std::chrono::system_clock::time_point tp = TP_REF;
                     tp += std::chrono::seconds(utc);
                     etime = std::chrono::system_clock::to_time_t(tp);
-                    timeval epoch = {etime , 0};
+                    struct timeval epoch = {etime , 0};
                     int res = settimeofday((const timeval*)&epoch, 0);
                     if(res==0){
                         char time_buf[64];
                         struct tm tinfo;
                         gmtime_r(&etime, &tinfo);
                         strftime(time_buf, sizeof(time_buf), "%c", &tinfo); 
-                        ESP_LOGI(TAG_CLUSTER, "The system date/time has been synchronized to UTC: %s", time_buf);
+                        ESP_LOGI(ZCLUSTER_TAG, "The system date/time has been synchronized to UTC: %s", time_buf);
                     } else {
-                        ESP_LOGW(TAG_CLUSTER, "Error setting date/time from coordinator source");
+                        ESP_LOGW(ZCLUSTER_TAG, "Error setting date/time from coordinator source");
                     }
                     break;}
                 case ESP_ZB_ZCL_ATTR_TIME_TIME_STATUS_ID:{
                     uint8_t status = *(static_cast<uint8_t*>(value));
-                    ESP_LOGD(TAG_CLUSTER, "Coordinator TimeStatus %d",status);
+                    ESP_LOGD(ZCLUSTER_TAG, "Coordinator TimeStatus %d",status);
                     break;}
                 case ESP_ZB_ZCL_ATTR_TIME_TIME_ZONE_ID:{
                     offset = *(static_cast<int32_t*>(value));
@@ -124,11 +133,11 @@ public:
                     break;}
                 case ESP_ZB_ZCL_ATTR_TIME_STANDARD_TIME_ID:{
                     uint32_t* stdTime = static_cast<uint32_t*>(value);
-                    ESP_LOGD(TAG_CLUSTER, "standard is %ld", *stdTime);
+                    ESP_LOGD(ZCLUSTER_TAG, "standard is %ld", *stdTime);
                     break;}
                 case ESP_ZB_ZCL_ATTR_TIME_LOCAL_TIME_ID:{
                     uint32_t localTime = *(static_cast<uint32_t*>(value));
-                    ESP_LOGD(TAG_CLUSTER, "localTime is %ld", localTime);
+                    ESP_LOGD(ZCLUSTER_TAG, "localTime is %ld", localTime);
                     break;}
             } // case
         } // for
@@ -136,7 +145,7 @@ public:
         std::string tz = strTZ + strDSToffset + strDSTStart + strDSTEnd;
         setenv("TZ",tz.c_str(),1); // You must include '0' after first designator e.g. GMT0GMT-1, ',1' is true or ON);
         tzset();
-        ESP_LOGI(TAG_CLUSTER, "TZ env variable set to : %s", tz.c_str());
+        ESP_LOGI(ZCLUSTER_TAG, "TZ env variable set to : %s", tz.c_str());
 
         /* C++ style
         auto n = std::chrono::system_clock::now();
@@ -150,7 +159,7 @@ public:
         time(&now);
         localtime_r(&now, &timeinfo);
         strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo); 
-        ESP_LOGI(TAG_CLUSTER, "Sync finisihed - the Current Local date/time is: %s", strftime_buf);
+        ESP_LOGI(ZCLUSTER_TAG, "Sync finisihed - the Current Local date/time is: %s", strftime_buf);
 
         //Trigger a new clock sync in one month
         ScheduledTask* task = new ScheduledTask(&ZbTimeClusterClient::syncRTC, this, 2635200000);
