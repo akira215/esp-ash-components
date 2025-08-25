@@ -405,6 +405,8 @@ esp_err_t ZbNode::handleZbActions(esp_zb_core_action_callback_id_t callback_id,
                                         const void *message)
 {
     esp_err_t ret = ESP_OK;
+    ESP_LOGD(ZNODE_TAG, "handleZbActions CallbackId", callback_id);
+
     switch (callback_id) {
     case ESP_ZB_CORE_SET_ATTR_VALUE_CB_ID:
         ret = handlingCmdSetAttribute((esp_zb_zcl_set_attr_value_message_t*)message);

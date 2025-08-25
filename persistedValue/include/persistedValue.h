@@ -29,15 +29,20 @@ class PersistedValue
 
 public:
     PersistedValue(const std::string& name, T value = 0, const std::string& namesp = std::string("nvs")):
-                _value(value), _key(name) {
+                _value(value), _key(name) 
+    {
         ESP_ERROR_CHECK(nvs_flash_init());
         ESP_LOGV(PERSISTED_TAG,"Opening nvs namespace %s", namesp.c_str());
         ESP_ERROR_CHECK(nvs_open(namesp.c_str(), NVS_READWRITE, &_handle));
+        ESP_LOGV(PERSISTED_TAG,"Value %s created with handle", _key.c_str(), _handle);
+        
         esp_err_t err = readValue(&_value);
         if (err!=ESP_OK)
             ESP_LOGW(PERSISTED_TAG,"Error during reading NVS - Error:%d ", err);
     }
     ~PersistedValue(){
+        ESP_LOGD(PERSISTED_TAG,"Closing NVS for Value %s, NVS handle %d", 
+                _key.c_str(), _handle);
         save();
         nvs_close(_handle);
     }
@@ -47,6 +52,8 @@ public:
         T read;
         readValue(&read);
         if (_value != read){
+            ESP_LOGD(PERSISTED_TAG,"Value %s differ with actual value, writing in NVS handle %d", 
+                _key.c_str(), _handle);
             ESP_ERROR_CHECK(writeValue());
             ESP_ERROR_CHECK(nvs_commit(_handle));
         } else
@@ -66,13 +73,14 @@ public:
 
 private:
     esp_err_t readValue(T* res){
-        ESP_LOGV(PERSISTED_TAG,"Reading value %s", _key.c_str());
         size_t len  = sizeof(T);
+        ESP_LOGV(PERSISTED_TAG,"Reading value %s, handle %d", _key.c_str(), _handle);
         return nvs_get_blob(_handle, _key.c_str(), (void*)(res), &len);
     }
     esp_err_t writeValue(){
-        ESP_LOGV(PERSISTED_TAG,"Writing value %s", _key.c_str());
-        return nvs_set_blob(_handle, _key.c_str(), (void*)(&_value), sizeof(T));
+        size_t len  = sizeof(T);
+        ESP_LOGV(PERSISTED_TAG,"Writing value %s, handle %d", _key.c_str(), _handle);
+        return nvs_set_blob(_handle, _key.c_str(), (void*)(&_value), len);
     }
 
 }; // PersistedValue Class

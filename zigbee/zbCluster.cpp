@@ -310,6 +310,8 @@ esp_err_t ZbCluster::attributesWereRead(esp_zb_zcl_read_attr_resp_variable_t* at
         attrs = attrs->next;
     } // while(attrs)
 
+    ESP_LOGV(ZCLUSTER_TAG, "Endpoint (%d), Cluster (%d), attributesWereRead nb: %d",
+                        getEndpointId(), getId(), attrToPost.size());
     postEvent(ATTR_UPDATED_AFTER_READ, attrToPost);
 
     return ESP_OK;
