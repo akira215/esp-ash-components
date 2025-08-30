@@ -15,6 +15,9 @@ Add all the esp-ash-components as a git submodule of your project
 Still work in progress, but is completely running. All bugs 
 could be reported to try to improve it.
 
+Does not support namespace in NVS for now
+
+
 ## Performance
 
 

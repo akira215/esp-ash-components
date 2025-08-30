@@ -20,31 +20,47 @@
 
 static const char *PERSISTED_TAG = "PersistedValue";
 
+
+// Base class is required to get a static handle
+class PersistedValueBase
+{
+protected: 
+    static nvs_handle_t _handle;
+};
+
 template<class T>
-class PersistedValue
+class PersistedValue: private PersistedValueBase
 {
     T _value;
     std::string _key;
-    nvs_handle_t _handle;
+    //static nvs_handle_t _handle = -1;
 
 public:
-    PersistedValue(const std::string& name, T value = 0, const std::string& namesp = std::string("nvs")):
+    PersistedValue(const std::string& name, T value = 0/*, const std::string& namesp = std::string("nvs")*/):
                 _value(value), _key(name) 
     {
-        ESP_ERROR_CHECK(nvs_flash_init());
-        ESP_LOGV(PERSISTED_TAG,"Opening nvs namespace %s", namesp.c_str());
-        ESP_ERROR_CHECK(nvs_open(namesp.c_str(), NVS_READWRITE, &_handle));
-        ESP_LOGV(PERSISTED_TAG,"Value %s created with handle", _key.c_str(), _handle);
+        // Handle == -1 when never initiated
+        if (_handle == -1)
+        {
+            ESP_ERROR_CHECK(nvs_flash_init());
+            //ESP_ERROR_CHECK(nvs_open(namesp.c_str(), NVS_READWRITE, &_handle));
+            ESP_ERROR_CHECK(nvs_open("nvs", NVS_READWRITE, &_handle));
+            ESP_LOGV(PERSISTED_TAG,"Value %s opened with handle %d", _key.c_str(), _handle);
+        } else {
+            ESP_LOGV(PERSISTED_TAG,"Value %s, Handle already setup to %d", _key.c_str(), _handle);
+        }
         
         esp_err_t err = readValue(&_value);
         if (err!=ESP_OK)
             ESP_LOGW(PERSISTED_TAG,"Error during reading NVS - Error:%d ", err);
     }
+
     ~PersistedValue(){
         ESP_LOGD(PERSISTED_TAG,"Closing NVS for Value %s, NVS handle %d", 
                 _key.c_str(), _handle);
         save();
         nvs_close(_handle);
+        _handle = -1;
     }
 
     void save (){
@@ -57,7 +73,7 @@ public:
             ESP_ERROR_CHECK(writeValue());
             ESP_ERROR_CHECK(nvs_commit(_handle));
         } else
-            ESP_LOGI(PERSISTED_TAG,"Same value on NVS, nothing to write");
+            ESP_LOGD(PERSISTED_TAG,"Same value on NVS, nothing to write");
     }
 
     T getValue() { return _value;}
@@ -77,6 +93,7 @@ private:
         ESP_LOGV(PERSISTED_TAG,"Reading value %s, handle %d", _key.c_str(), _handle);
         return nvs_get_blob(_handle, _key.c_str(), (void*)(res), &len);
     }
+    
     esp_err_t writeValue(){
         size_t len  = sizeof(T);
         ESP_LOGV(PERSISTED_TAG,"Writing value %s, handle %d", _key.c_str(), _handle);

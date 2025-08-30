@@ -1,4 +1,14 @@
+/*
+  persistedValue
+  Repository: https://github.com/akira215/esp-ash-components
+  License: GNU GENERAL PUBLIC LICENSE Version 3, 29 June 2007
+  Author: Akira Shimahara
+*/
+
 #include "persistedValue.h"
+
+// Init of static handle of base class
+nvs_handle_t PersistedValueBase::_handle = -1;
 
 template <>
 esp_err_t PersistedValue<int8_t>::readValue(int8_t* res) {
