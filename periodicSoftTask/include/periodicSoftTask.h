@@ -26,6 +26,8 @@ public:
     /// to pass args to the function, use std::bind
     /// @param func pointer to the method ex: &Main::task
     /// @param instance instance of the object for this handler (ex: this)
+    /// @param delay_ms delay for the periodic task
+    /// @param name name of the task that will be generated
     template<typename C>
     PeriodicSoftTask(void (C::* func)(), C* instance, 
                     uint64_t delay_ms, const char* name = "periodicSoftTask") {

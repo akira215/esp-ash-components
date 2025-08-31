@@ -33,11 +33,11 @@ public:
      ZbTemperatureMeasCluster(const ZbTemperatureMeasCluster& other)
     {
         esp_zb_temperature_meas_cluster_cfg_t cfg;
-        cfg.measured_value = *((uint16_t*)(other.getAttribute((uint16_t)
+        cfg.measured_value = *((int16_t*)(other.getAttribute((uint16_t)
                             ESP_ZB_ZCL_ATTR_TEMP_MEASUREMENT_VALUE_ID)->data_p));
-        cfg.min_value = *((uint16_t*)(other.getAttribute((uint16_t)
+        cfg.min_value = *((int16_t*)(other.getAttribute((uint16_t)
                             ESP_ZB_ZCL_ATTR_TEMP_MEASUREMENT_MIN_VALUE_ID)->data_p));
-        cfg.max_value = *((uint16_t*)(other.getAttribute((uint16_t)
+        cfg.max_value = *((int16_t*)(other.getAttribute((uint16_t)
                             ESP_ZB_ZCL_ATTR_TEMP_MEASUREMENT_MAX_VALUE_ID)->data_p));
         
         
