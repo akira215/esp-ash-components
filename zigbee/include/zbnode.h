@@ -38,7 +38,7 @@ static const char *ZNODE_TAG = "ZbNode";
 #ifdef CONFIG_ZB_ZED // menuconfig Zigbee device type
     #define ZB_DEVICE_TYPE  ESP_ZB_DEVICE_TYPE_ED
 #elif CONFIG_ZB_ZCZR
-    #define ZB_DEVICE_TYPE = ESP_ZB_DEVICE_TYPE_ROUTER
+    #define ZB_DEVICE_TYPE  ESP_ZB_DEVICE_TYPE_ROUTER
 #endif
 
 

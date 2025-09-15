@@ -22,8 +22,12 @@
 
 //#include "ha/esp_zigbee_ha_standard.h"
 
-#if !defined ZB_ED_ROLE
-#error Define ZB_ED_ROLE in idf.py menuconfig to compile sensor (End Device) source code.
+//#if !defined ZB_ED_ROLE
+//#error Define ZB_ED_ROLE in idf.py menuconfig to compile sensor (End Device) source code.
+//#endif
+
+#if !defined CONFIG_ZB_ZED && !defined CONFIG_ZB_ZCZR
+#error Define ZB_ED_ROLE in idf.py menuconfig to compile sensor (End Device or Router) source code.
 #endif
 
 // Static init
