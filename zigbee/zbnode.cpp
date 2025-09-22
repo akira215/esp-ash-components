@@ -415,6 +415,7 @@ esp_err_t ZbNode::handleZbActions(esp_zb_core_action_callback_id_t callback_id,
     case ESP_ZB_CORE_SET_ATTR_VALUE_CB_ID:
         ret = handlingCmdSetAttribute((esp_zb_zcl_set_attr_value_message_t*)message);
         break;
+
     case ESP_ZB_CORE_REPORT_ATTR_CB_ID:
         ret = zb_attribute_reporting_handler((esp_zb_zcl_report_attr_message_t *)message);
         break;
@@ -431,6 +432,14 @@ esp_err_t ZbNode::handleZbActions(esp_zb_core_action_callback_id_t callback_id,
         ret = zb_configure_report_resp_handler((esp_zb_zcl_cmd_config_report_resp_message_t *)message);
         break;
         */
+    case ESP_ZB_CORE_OTA_UPGRADE_VALUE_CB_ID:
+        ESP_LOGW(ZNODE_TAG, "Receive Zigbee action(0x%x) ESP_ZB_CORE_OTA_UPGRADE_VALUE_CB_ID", callback_id);
+        break;
+
+    case ESP_ZB_CORE_OTA_UPGRADE_QUERY_IMAGE_RESP_CB_ID:
+        ESP_LOGW(ZNODE_TAG, "Receive Zigbee action(0x%x) ESP_ZB_CORE_OTA_UPGRADE_QUERY_IMAGE_RESP_CB_ID", callback_id);
+        break;
+        
     default:
         ESP_LOGW(ZNODE_TAG, "Receive Zigbee action(0x%x) Unregistred Callback -> Add a Callback in ZbNode::handleZbActions", callback_id);
         break;
