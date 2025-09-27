@@ -17,18 +17,19 @@ void ScheduledTask::timerCallback(void *arg)
     instance->_func();
 
     //delete the object as it is oneshot timer
-    delete instance;
+    if(instance->_autoDelete)
+        delete instance;
 }
 
 
-void ScheduledTask::initAndStartTimer(uint64_t delay_ms, const char* name)
+void ScheduledTask::startTimer(uint64_t delay_ms)
 {
     // Configure the timer
     esp_timer_create_args_t oneshot_timer_args;
 
     oneshot_timer_args.callback = &timerCallback,
 	oneshot_timer_args.arg      = (void*)this,
-	oneshot_timer_args.name     = name;
+	oneshot_timer_args.name     = _name.c_str();
 			
     ESP_ERROR_CHECK(esp_timer_create(&oneshot_timer_args, &_timer));
 

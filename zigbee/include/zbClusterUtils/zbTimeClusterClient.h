@@ -41,6 +41,8 @@ class ZbTimeClusterClient : public ZbTimeCluster
     uint8_t _endpt;
     uint16_t _srv_addr;
 
+    bool isSync;
+
 public:
 
     void processSync(clusterEvent_t event, std::vector<attribute_t> attrs){
@@ -56,7 +58,7 @@ public:
             uint16_t attrId = el.attrId;
             void* value = el.value;
 
-            ESP_LOGD(ZCLUSTER_TAG, "Time cluster event type %x attribute %x", event, attrId);
+            ESP_LOGV(ZCLUSTER_TAG, "TimeCluster - event type %x attribute %x", event, attrId);
    
             switch(attrId){
                 case ESP_ZB_ZCL_ATTR_TIME_TIME_ID:{
@@ -71,14 +73,14 @@ public:
                         struct tm tinfo;
                         gmtime_r(&etime, &tinfo);
                         strftime(time_buf, sizeof(time_buf), "%c", &tinfo); 
-                        ESP_LOGI(ZCLUSTER_TAG, "The system date/time has been synchronized to UTC: %s", time_buf);
+                        ESP_LOGI(ZCLUSTER_TAG, "TimeCluster - The system date/time has been synchronized to UTC: %s", time_buf);
                     } else {
-                        ESP_LOGW(ZCLUSTER_TAG, "Error setting date/time from coordinator source");
+                        ESP_LOGW(ZCLUSTER_TAG, "TimeCluster - Error setting date/time from coordinator source");
                     }
                     break;}
                 case ESP_ZB_ZCL_ATTR_TIME_TIME_STATUS_ID:{
                     uint8_t status = *(static_cast<uint8_t*>(value));
-                    ESP_LOGD(ZCLUSTER_TAG, "Coordinator TimeStatus %d",status);
+                    ESP_LOGV(ZCLUSTER_TAG, "TimeCluster - Coordinator TimeStatus %d",status);
                     break;}
                 case ESP_ZB_ZCL_ATTR_TIME_TIME_ZONE_ID:{
                     offset = *(static_cast<int32_t*>(value));
@@ -133,11 +135,11 @@ public:
                     break;}
                 case ESP_ZB_ZCL_ATTR_TIME_STANDARD_TIME_ID:{
                     uint32_t* stdTime = static_cast<uint32_t*>(value);
-                    ESP_LOGD(ZCLUSTER_TAG, "standard is %ld", *stdTime);
+                    ESP_LOGV(ZCLUSTER_TAG, "TimeCluster - standard is %ld", *stdTime);
                     break;}
                 case ESP_ZB_ZCL_ATTR_TIME_LOCAL_TIME_ID:{
                     uint32_t localTime = *(static_cast<uint32_t*>(value));
-                    ESP_LOGD(ZCLUSTER_TAG, "localTime is %ld", localTime);
+                    ESP_LOGV(ZCLUSTER_TAG, "TimeCluster - localTime is %ld", localTime);
                     break;}
             } // case
         } // for
@@ -145,7 +147,7 @@ public:
         std::string tz = strTZ + strDSToffset + strDSTStart + strDSTEnd;
         setenv("TZ",tz.c_str(),1); // You must include '0' after first designator e.g. GMT0GMT-1, ',1' is true or ON);
         tzset();
-        ESP_LOGI(ZCLUSTER_TAG, "TZ env variable set to : %s", tz.c_str());
+        ESP_LOGI(ZCLUSTER_TAG, "TimeCluster - TZ env variable set to : %s", tz.c_str());
 
         /* C++ style
         auto n = std::chrono::system_clock::now();
@@ -159,15 +161,17 @@ public:
         time(&now);
         localtime_r(&now, &timeinfo);
         strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo); 
-        ESP_LOGI(ZCLUSTER_TAG, "Sync finisihed - the Current Local date/time is: %s", strftime_buf);
+        ESP_LOGI(ZCLUSTER_TAG, "TimeCluster - Sync completed - the Current Local date/time is: %s", strftime_buf);
 
-        //Trigger a new clock sync in one month
+        isSync = true;
+
+        //Trigger a new clock sync in one month (30,5 days)
         ScheduledTask* task = new ScheduledTask(&ZbTimeClusterClient::syncRTC, this, 2635200000);
     };
 
 public:
     ZbTimeClusterClient( uint8_t dst_endpoint = 1, 
-                uint16_t short_addr = 0x0000 ) : ZbTimeCluster(true)
+                uint16_t short_addr = 0x0000 ) : ZbTimeCluster(true), isSync(false)
     {
         _endpt = dst_endpoint;
         _srv_addr = short_addr;
@@ -210,5 +214,8 @@ public:
         readAttribute(std::span(arr), _endpt, _srv_addr);
 
     };
-   
+
+    ///@brief check if RTC clock is sync
+    ///@return true if internal clock is synchronized, otherwise false
+    bool isSynchronized() { return isSync; };
 };

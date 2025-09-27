@@ -9,6 +9,7 @@
 
 #include "esp_timer.h"
 #include <functional>
+#include <string>
 
 /// @brief Task that will be trigger after a timeout
 class ScheduledTask
@@ -17,8 +18,11 @@ class ScheduledTask
     taskCallback_t _func;
     esp_timer_handle_t _timer;
 
+    std::string _name;
+    bool _autoDelete;
+
     static void timerCallback(void* arg);
-    void initAndStartTimer(uint64_t delay_ms, const char* name);
+
 public:
     
     /// @brief Construct the task scheduler object 
@@ -28,9 +32,13 @@ public:
     /// @param instance instance of the object for this handler (ex: this)
     template<typename C>
     ScheduledTask(void (C::* func)(), C* instance, 
-                    uint64_t delay_ms, const char* name = "scheduledTask") {
+                    uint64_t delay_ms, 
+                    std::string name = std::string("scheduledTask"),
+                    bool autoDelete = true) :
+                        _name(name), _autoDelete(autoDelete) {
         _func = std::bind(func,std::ref(*instance));
-        initAndStartTimer(delay_ms, name);
+        startTimer(delay_ms);
     }
     ~ScheduledTask();
+    void startTimer(uint64_t delay_ms);
 };
