@@ -2,13 +2,13 @@
 targets:
   - esp32c6
 dependencies:
-  espressif/esp-zboss-lib: "^1.6.4"
-  espressif/esp-zigbee-lib: "^1.6.7"
+  espressif/esp-modbus:
+    version: "^2.1.0"
   ## Required IDF version
   idf:
     version: ">=5.0.0"
 version: 0.1.0
-description: "C++ Zigbee implementation"
+description: "C++ Modbus implementation"
 license: "MIT"
 tags:
-  - zigbee
+  - modbus

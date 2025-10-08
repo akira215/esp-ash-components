@@ -21,8 +21,8 @@ class ZbPressureMeasCluster : public ZbCluster
 public:
     ZbPressureMeasCluster( bool isClient = false,
                     int16_t measured_value = ESP_ZB_ZCL_ATTR_PRESSURE_MEASUREMENT_VALUE_DEFAULT_VALUE,
-                    int16_t min_value = ESP_ZB_ZCL_PATTR_RESSURE_MEASUREMENT_MIN_VALUE_DEFAULT_VALUE,
-                    int16_t max_value = ESP_ZB_ZCL_PATTR_RESSURE_MEASUREMENT_MAX_VALUE_DEFAULT_VALUE
+                    int16_t min_value = ESP_ZB_ZCL_ATTR_PRESSURE_MEASUREMENT_MIN_VALUE_DEFAULT_VALUE,
+                    int16_t max_value = ESP_ZB_ZCL_ATTR_PRESSURE_MEASUREMENT_MAX_VALUE_DEFAULT_VALUE
                     ) 
     {
         esp_zb_pressure_meas_cluster_cfg_t cfg;

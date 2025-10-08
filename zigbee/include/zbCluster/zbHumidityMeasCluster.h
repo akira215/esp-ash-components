@@ -20,9 +20,9 @@ class ZbHumidityMeasCluster : public ZbCluster
         //  ********************************************
 public:
     ZbHumidityMeasCluster( bool isClient = false,
-                    int16_t measured_value = ESP_ZB_ZCL_ATTR_PRESSURE_MEASUREMENT_VALUE_DEFAULT_VALUE,
-                    int16_t min_value = ESP_ZB_ZCL_PATTR_RESSURE_MEASUREMENT_MIN_VALUE_DEFAULT_VALUE,
-                    int16_t max_value = ESP_ZB_ZCL_PATTR_RESSURE_MEASUREMENT_MAX_VALUE_DEFAULT_VALUE
+                    int16_t measured_value = ESP_ZB_ZCL_REL_HUMIDITY_MEASUREMENT_MEASURED_VALUE_DEFAULT,
+                    int16_t min_value = ESP_ZB_ZCL_REL_HUMIDITY_MEASUREMENT_MIN_MEASURED_VALUE_DEFAULT,
+                    int16_t max_value = ESP_ZB_ZCL_REL_HUMIDITY_MEASUREMENT_MAX_MEASURED_VALUE_DEFAULT
                     ) 
     {
         esp_zb_humidity_meas_cluster_cfg_t cfg;
