@@ -7,13 +7,77 @@
 
 
 #include <esp_log.h>
+#include <esp_err.h>
 #include "modbusMaster.h"
-
-
 
 static const char *MODBUS_TAG = "Modbus";
 
-ModbusMaster::ModbusMaster(uint8_t pin)
+
+#ifdef CONFIG_MB_UART_DEBUG
+    #define MB_CUST_DATA_LEN 100 // The length of debug command buffer
+    static char my_custom_data[MB_CUST_DATA_LEN] = {0}; // the debug data buffer
+
+    // This is the custom function handler for the command.
+    // The handler is executed from the context of modbus controller event task and should be as simple as possible.
+    // Parameters: frame_ptr - the pointer to the incoming ADU frame from slave starting from function code,
+    // len - the pointer to length of the frame. After return from the handler the modbus object will 
+    // handle the end of transaction according to the exception returned.
+    mb_exception_t ModbusMaster::debug_handler(void *inst, uint8_t *frame_ptr, uint16_t *len)
+    {
+        MB_RETURN_ON_FALSE((frame_ptr && len && *len && *len < (MB_CUST_DATA_LEN - 1)), MB_EX_ILLEGAL_DATA_VALUE, MODBUS_TAG,
+                                "incorrect custom frame buffer");
+        ESP_LOGD(MODBUS_TAG, "Custom handler, Frame ptr: %p, len: %u", frame_ptr, *len);
+        strncpy((char *)&my_custom_data[0], (char *)&frame_ptr[1], MB_CUST_DATA_LEN);
+        ESP_LOG_BUFFER_HEXDUMP("CUSTOM_DATA", &my_custom_data[0], (*len - 1), ESP_LOG_WARN);
+        return MB_EX_NONE;
+    }
+#endif
+
+ModbusMaster::ModbusMaster(mb_comm_mode_t mode,
+                            uart_port_t port,
+                            uint32_t baudrate,
+                            uart_word_length_t data_bits,
+                            uart_parity_t parity,
+                            uart_stop_bits_t stop_bits,
+                            uint32_t timeout)
 {
+    // Initialize Modbus controller
+    mb_communication_info_t comm;
+
+    comm.ser_opts.mode = mode;
+    comm.ser_opts.port = port;
+    comm.ser_opts.baudrate = baudrate;
+    comm.ser_opts.data_bits = data_bits;
+    comm.ser_opts.parity = parity;
+    comm.ser_opts.stop_bits = stop_bits;
+    comm.ser_opts.response_tout_ms = timeout;
+    comm.ser_opts.uid = 0; // dummy port for master
+
+    esp_err_t err = mbc_master_create_serial(&comm, &_master_handle);
+    if (_master_handle == nullptr)
+        ESP_LOGE(MODBUS_TAG,"mb controller initialization fail, null handle.");
+    
+    if (err != ESP_OK)
+        ESP_LOGE(MODBUS_TAG,"mb controller initialization fail, returns(0x%x).", (int)err);
+
+
+    #ifdef CONFIG_MB_UART_DEBUG
+
+        const uint8_t override_command = 0x41;
+        // Delete the handler for specified command, if available
+        err = mbc_delete_handler(_master_handle, override_command);
+        if (err != ESP_OK)
+            ESP_LOGE(MODBUS_TAG,"could not override handler, returned (0x%x).", (int)err);
+    
+        err = mbc_set_handler(_master_handle, override_command, debug_handler);
+        if (err != ESP_OK)
+            ESP_LOGE(MODBUS_TAG,"could not override handler, returned (0x%x).", (int)err);
+
+        mb_fn_handler_fp handler = NULL;
+        err = mbc_get_handler(_master_handle, override_command, &handler);
+        if ((err != ESP_OK) || (handler != debug_handler))
+            ESP_LOGE(MODBUS_TAG,"could not get handler for command %d, returned (0x%x).", (int)override_command, (int)err);
+    
+    #endif
 
 }
