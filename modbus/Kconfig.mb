@@ -1,4 +1,4 @@
-menu "Modbus Debug"
+menu "Modbus Configuration"
 
    config MB_UART_DEBUG
         bool "Enable debugging Modbus message on terminal"

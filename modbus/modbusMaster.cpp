@@ -17,6 +17,7 @@ static const char *MODBUS_TAG = "Modbus";
     #define MB_CUST_DATA_LEN 100 // The length of debug command buffer
     static char my_custom_data[MB_CUST_DATA_LEN] = {0}; // the debug data buffer
 
+    // static function to output Modbus message
     // This is the custom function handler for the command.
     // The handler is executed from the context of modbus controller event task and should be as simple as possible.
     // Parameters: frame_ptr - the pointer to the incoming ADU frame from slave starting from function code,
@@ -35,11 +36,16 @@ static const char *MODBUS_TAG = "Modbus";
 
 ModbusMaster::ModbusMaster(mb_comm_mode_t mode,
                             uart_port_t port,
+                            int tx_pin,
+                            int rx_pin,
+                            int rts_pin,
+                            int cts_pin,
                             uint32_t baudrate,
                             uart_word_length_t data_bits,
                             uart_parity_t parity,
                             uart_stop_bits_t stop_bits,
-                            uint32_t timeout)
+                            uint32_t timeout,
+                            uart_mode_t uart_mode)
 {
     // Initialize Modbus controller
     mb_communication_info_t comm;
@@ -62,7 +68,7 @@ ModbusMaster::ModbusMaster(mb_comm_mode_t mode,
 
 
     #ifdef CONFIG_MB_UART_DEBUG
-
+        // override handler for output Modbus message
         const uint8_t override_command = 0x41;
         // Delete the handler for specified command, if available
         err = mbc_delete_handler(_master_handle, override_command);
@@ -80,4 +86,37 @@ ModbusMaster::ModbusMaster(mb_comm_mode_t mode,
     
     #endif
 
+
+    // Set UART pin numbers
+    err = uart_set_pin(port, tx_pin, rx_pin,
+                              rts_pin, cts_pin);
+    if (err != ESP_OK)
+        ESP_LOGE(MODBUS_TAG,"mb serial set pin failure, uart_set_pin() returned (0x%x).", (int)err);                     
+   
+    err = mbc_master_start(_master_handle);
+    if (err != ESP_OK)
+        ESP_LOGE(MODBUS_TAG,"mb controller start fail, returned (0x%x).", (int)err);                
+   
+
+    // Set driver mode to Half Duplex
+    err = uart_set_mode(port, uart_mode);
+    if (err != ESP_OK)
+        ESP_LOGE(MODBUS_TAG,"mb serial set mode failure, uart_set_mode() returned (0x%x).", (int)err);
+
+    vTaskDelay(5);
+    /*
+    err = mbc_master_set_descriptor(_master_handle, &device_parameters[0], num_device_parameters);
+    MB_RETURN_ON_FALSE((err == ESP_OK), ESP_ERR_INVALID_STATE, TAG,
+                                "mb controller set descriptor fail, returns(0x%x).", (int)err);
+*/
+    ESP_LOGI(MODBUS_TAG, "Modbus master stack initialized...");
+
+
+
+}
+
+ModbusMaster::~ModbusMaster()
+{
+    ESP_ERROR_CHECK(mbc_master_delete(_master_handle));
+    _master_handle = nullptr;
 }
