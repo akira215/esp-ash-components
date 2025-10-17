@@ -56,7 +56,18 @@ class ModbusMaster
                     uint32_t timeout = 1000,
                     uart_mode_t uart_mode = UART_MODE_RS485_HALF_DUPLEX);
         ~ModbusMaster();
-    
+
+        /// @brief Set dictionary for the devices on the bus
+        /// @param dict: an array of 'mb_parameter_descriptor_t'
+        /// @param n: number of items in the 'dict' array
+        void setDictionary(const mb_parameter_descriptor_t *dict, uint16_t n);
+        
+        /// @brief read parameter from device
+        /// @param cid: cid of the dictionary
+        void getParameter(uint16_t cid);
+
+        void sendRequest();
+        
         #ifdef CONFIG_MB_UART_DEBUG
             /// @brief Debug handler to read message on Modbus line
             static mb_exception_t debug_handler(void *inst, uint8_t *frame_ptr, uint16_t *len);

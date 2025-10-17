@@ -66,7 +66,6 @@ ModbusMaster::ModbusMaster(mb_comm_mode_t mode,
     if (err != ESP_OK)
         ESP_LOGE(MODBUS_TAG,"mb controller initialization fail, returns(0x%x).", (int)err);
 
-
     #ifdef CONFIG_MB_UART_DEBUG
         // override handler for output Modbus message
         const uint8_t override_command = 0x41;
@@ -86,7 +85,6 @@ ModbusMaster::ModbusMaster(mb_comm_mode_t mode,
     
     #endif
 
-
     // Set UART pin numbers
     err = uart_set_pin(port, tx_pin, rx_pin,
                               rts_pin, cts_pin);
@@ -97,21 +95,12 @@ ModbusMaster::ModbusMaster(mb_comm_mode_t mode,
     if (err != ESP_OK)
         ESP_LOGE(MODBUS_TAG,"mb controller start fail, returned (0x%x).", (int)err);                
    
-
     // Set driver mode to Half Duplex
     err = uart_set_mode(port, uart_mode);
     if (err != ESP_OK)
         ESP_LOGE(MODBUS_TAG,"mb serial set mode failure, uart_set_mode() returned (0x%x).", (int)err);
 
-    vTaskDelay(5);
-    /*
-    err = mbc_master_set_descriptor(_master_handle, &device_parameters[0], num_device_parameters);
-    MB_RETURN_ON_FALSE((err == ESP_OK), ESP_ERR_INVALID_STATE, TAG,
-                                "mb controller set descriptor fail, returns(0x%x).", (int)err);
-*/
     ESP_LOGI(MODBUS_TAG, "Modbus master stack initialized...");
-
-
 
 }
 
@@ -120,3 +109,88 @@ ModbusMaster::~ModbusMaster()
     ESP_ERROR_CHECK(mbc_master_delete(_master_handle));
     _master_handle = nullptr;
 }
+
+void ModbusMaster::setDictionary(const mb_parameter_descriptor_t *dict, uint16_t n)
+{
+    vTaskDelay(5);
+    esp_err_t err = mbc_master_set_descriptor(_master_handle, dict, n);
+    
+    if (err != ESP_OK)
+        ESP_LOGE(MODBUS_TAG,"mb controller set descriptor fail, returns(0x%x).", (int)err);
+    else
+        ESP_LOGI(MODBUS_TAG,"mb controller set descriptor done");
+
+}
+
+void ModbusMaster::getParameter(uint16_t cid)
+{
+    uint8_t type;
+    uint8_t temp_data[4];
+    esp_err_t err = mbc_master_get_parameter(_master_handle, cid, temp_data, &type);
+    if (err == ESP_OK) {
+        ESP_LOGI(MODBUS_TAG, "Characteristic read successful - data: %d %d - type: %d",
+                temp_data[0], temp_data[1], type);
+    } else {
+        ESP_LOGE(MODBUS_TAG, "Characteristic #%d read fail, err = 0x%x (%s).",                      
+                            cid,
+                            (int)err,                                                             
+                            (char *)esp_err_to_name(err));     
+    }
+}
+
+void ModbusMaster::sendRequest()
+{
+    int16_t response = -1;
+
+    mb_param_request_t req = {
+        .slave_addr = 2,              // the slave UID to send the request
+        .command = 0x03,                            // read holding 0x04 read input,
+        .reg_start = 0x15E,                             // unused,
+        .reg_size = 1   // length of the data to receive (registers)
+    };
+    
+    esp_err_t err = mbc_master_send_request(_master_handle, &req, &response);
+
+
+    if (err == ESP_OK) {
+        ESP_LOGI(MODBUS_TAG, "T_outdoor_air read successful - data: %d ",
+                response);
+    } else {
+        ESP_LOGE(MODBUS_TAG, "Request read fail, err = 0x%x (%s).",                      
+                            (int)err,                                                             
+                            (char *)esp_err_to_name(err));     
+    }
+
+    /////////////////////////////////////////////////////////////////////////////////////
+
+    req.reg_start = 0x15F;
+
+    err = mbc_master_send_request(_master_handle, &req, &response);
+
+
+    if (err == ESP_OK) {
+        ESP_LOGI(MODBUS_TAG, "T_extract_air read successful - data: %d ",
+                response);
+    } else {
+        ESP_LOGE(MODBUS_TAG, "Request read fail, err = 0x%x (%s).",                      
+                            (int)err,                                                             
+                            (char *)esp_err_to_name(err));
+    }
+    /////////////////////////////////////////////////////////////////////////////////////
+
+    req.reg_start = 0x15C;
+
+    err = mbc_master_send_request(_master_handle, &req, &response);
+
+
+    if (err == ESP_OK) {
+        ESP_LOGI(MODBUS_TAG, "Bypass position read successful - data: %d ",
+                response);
+    } else {
+        ESP_LOGE(MODBUS_TAG, "Request read fail, err = 0x%x (%s).",                      
+                            (int)err,                                                             
+                            (char *)esp_err_to_name(err));
+    }
+                            
+}
+
