@@ -5,7 +5,7 @@
   Author: Akira Shimahara
 */
 
-
+#define LOG_LOCAL_LEVEL ESP_LOG_VERBOSE
 #include <esp_log.h>
 #include <esp_err.h>
 #include "modbusMaster.h"
@@ -110,45 +110,72 @@ ModbusMaster::~ModbusMaster()
     _master_handle = nullptr;
 }
 
-void ModbusMaster::setDictionary(const mb_parameter_descriptor_t *dict, uint16_t n)
+ModbusMaster::data_t ModbusMaster::getRequest(uint8_t slave_addr, 
+                                            uint8_t cmd, 
+                                            uint16_t reg_start, 
+                                            uint16_t reg_size)
 {
-    vTaskDelay(5);
-    esp_err_t err = mbc_master_set_descriptor(_master_handle, dict, n);
-    
-    if (err != ESP_OK)
-        ESP_LOGE(MODBUS_TAG,"mb controller set descriptor fail, returns(0x%x).", (int)err);
-    else
-        ESP_LOGI(MODBUS_TAG,"mb controller set descriptor done");
+    std::byte ret[reg_size*2];
+    data_t data;
 
-}
+    mb_param_request_t req = {
+        .slave_addr = slave_addr,              // the slave UID to send the request
+        .command = cmd,                            // read holding 0x04 read input,
+        .reg_start = reg_start,                             // unused,
+        .reg_size = reg_size   // length of the data to receive (registers)
+    };
 
-void ModbusMaster::getParameter(uint16_t cid)
-{
-    uint8_t type;
-    uint8_t temp_data[4];
-    esp_err_t err = mbc_master_get_parameter(_master_handle, cid, temp_data, &type);
+     esp_err_t err = mbc_master_send_request(_master_handle, &req, (void*) ret);
+
+
     if (err == ESP_OK) {
-        ESP_LOGI(MODBUS_TAG, "Characteristic read successful - data: %d %d - type: %d",
-                temp_data[0], temp_data[1], type);
+        ESP_LOGV(MODBUS_TAG, "sendRequest read successful - data: 0x %02x %02x ",
+                ret[0], ret[1]);
+        data_t data(ret, ret + sizeof(ret) / sizeof(ret[0]));
+        return data;
     } else {
-        ESP_LOGE(MODBUS_TAG, "Characteristic #%d read fail, err = 0x%x (%s).",                      
-                            cid,
+        ESP_LOGE(MODBUS_TAG, "Request read fail, err = 0x%x (%s).",                      
                             (int)err,                                                             
                             (char *)esp_err_to_name(err));     
     }
+
+
+    return data_t();
 }
 
-void ModbusMaster::sendRequest()
+int16_t ModbusMaster::getInt(data_t data)
 {
+    if (data.size()==1)
+        return (int16_t)(data.at(0));
+
+    if (data.size()<1)
+        return 0;
+    
+    return (int16_t)((u_char)(data.at(0)) | (u_char)(data.at(1)) << 8);
+}
+
+void ModbusMaster::testRequest()
+{
+    
+    ESP_LOGI(MODBUS_TAG, "sendRequest TEST");
+    data_t ret = getRequest(2, CMD_READ_HOLDING_REGISTER, 0x15E, 1);
+    ESP_LOGV(MODBUS_TAG, "Slave answer %d :", getInt(ret));
+    for (auto i: ret) {
+      	ESP_LOGV(MODBUS_TAG, "0x%02x", i);
+    }
+
+
+    ret = getRequest(2, CMD_READ_HOLDING_REGISTER, 0x15C, 1);
+    
     int16_t response = -1;
 
     mb_param_request_t req = {
         .slave_addr = 2,              // the slave UID to send the request
-        .command = 0x03,                            // read holding 0x04 read input,
+        .command = CMD_READ_HOLDING_REGISTER,                            // read holding 0x04 read input,
         .reg_start = 0x15E,                             // unused,
         .reg_size = 1   // length of the data to receive (registers)
     };
-    
+
     esp_err_t err = mbc_master_send_request(_master_handle, &req, &response);
 
 

@@ -7,32 +7,43 @@
 
 #pragma once
 
-#include "mbcontroller.h"
+#include <cstddef>
+#include <vector>
+#include "esp_modbus_master.h"
+//#include "mbcontroller.h"
 
+//#include "mb_objects/include/mb_proto.h"
 
 // Helper macros for dictionary
-// The macro to get offset for parameter in the appropriate structure
-#define HOLD_OFFSET(field) ((uint16_t)(offsetof(holding_reg_params_t, field) + 1))
-#define INPUT_OFFSET(field) ((uint16_t)(offsetof(input_reg_params_t, field) + 1))
-#define COIL_OFFSET(field) ((uint16_t)(offsetof(coil_reg_params_t, field) + 1))
-// Discrete offset macro
-#define DISCR_OFFSET(field) ((uint16_t)(offsetof(discrete_reg_params_t, field) + 1))
 
-#define STR(fieldname) ((const char *)( fieldname ))
-#define TEST_HOLD_REG_START(field) (HOLD_OFFSET(field) >> 1)
-#define TEST_HOLD_REG_SIZE(field) (sizeof(((holding_reg_params_t *)0)->field) >> 1)
-
-#define TEST_INPUT_REG_START(field) (INPUT_OFFSET(field) >> 1)
-#define TEST_INPUT_REG_SIZE(field) (sizeof(((input_reg_params_t *)0)->field) >> 1)
-
-// Options can be used as bit masks or parameter limits
-#define OPTS(min_val, max_val, step_val) { .opt1 = min_val, .opt2 = max_val, .opt3 = step_val }
 
 class ModbusMaster
 {
     void *_master_handle = nullptr;
     mb_parameter_descriptor_t *_device_parameters = nullptr;
 
+    enum mb_command
+    {   
+        CMD_NONE                        = (  0 ),
+        CMD_READ_COILS                  = (  1 ),
+        CMD_READ_DISCRETE_INPUTS        = (  2 ),
+        CMD_WRITE_SINGLE_COIL           = (  5 ),
+        CMD_WRITE_MULTIPLE_COILS        = ( 15 ),
+        CMD_READ_HOLDING_REGISTER       = (  3 ),
+        CMD_READ_INPUT_REGISTER         = (  4 ),
+        CMD_WRITE_REGISTER              = (  6 ),
+        CMD_WRITE_MULTIPLE_REGISTERS    = ( 16 ),
+        CMD_READWRITE_MULTIPLE_REGISTERS= ( 23 ),
+        CMD_DIAG_READ_EXCEPTION         = (  7 ),
+        CMD_DIAG_DIAGNOSTIC             = (  8 ),
+        CMD_DIAG_GET_COM_EVENT_CNT      = ( 11 ),
+        CMD_DIAG_GET_COM_EVENT_LOG      = ( 12 ),
+        CMD_OTHER_REPORT_SLAVEID        = ( 17 ),
+        CMD_ERROR                       = ( 0x80 )
+    };
+
+    public:
+        typedef std::vector<std::byte> data_t;
 
     public:
         /// @brief Constructor
@@ -43,6 +54,7 @@ class ModbusMaster
         /// @param parity:  transmission parity on RS485
         /// @param stop_bits: transmission stop bits on RS485
         /// @param timeout: response timeout in milliseconds
+        /// @param uart_mode: RS485 uart mode
         ModbusMaster(mb_comm_mode_t mode = MB_RTU,
                     uart_port_t port = UART_NUM_0,
                     int tx_pin = UART_PIN_NO_CHANGE,
@@ -57,16 +69,20 @@ class ModbusMaster
                     uart_mode_t uart_mode = UART_MODE_RS485_HALF_DUPLEX);
         ~ModbusMaster();
 
-        /// @brief Set dictionary for the devices on the bus
-        /// @param dict: an array of 'mb_parameter_descriptor_t'
-        /// @param n: number of items in the 'dict' array
-        void setDictionary(const mb_parameter_descriptor_t *dict, uint16_t n);
-        
-        /// @brief read parameter from device
-        /// @param cid: cid of the dictionary
-        void getParameter(uint16_t cid);
+        void testRequest(); // TODEL
 
-        void sendRequest();
+        /// @brief send a get request to a slave
+        /// @param slave_addr: slave adress on the bus taht request will be send to
+        /// @param cmd: Modbus command
+        /// @param reg_start: address of the register on the slave
+        /// @param reg_size: length (in word i.e. 2 bytes or 16 bits) of slave register
+        /// @param return:  Answer from slave
+        data_t getRequest(uint8_t slave_addr, 
+                            uint8_t cmd, 
+                            uint16_t reg_start, 
+                            uint16_t reg_size);
+
+        static int16_t getInt(data_t data);
         
         #ifdef CONFIG_MB_UART_DEBUG
             /// @brief Debug handler to read message on Modbus line
