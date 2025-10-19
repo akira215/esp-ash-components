@@ -110,13 +110,12 @@ ModbusMaster::~ModbusMaster()
     _master_handle = nullptr;
 }
 
-ModbusMaster::data_t ModbusMaster::getRequest(uint8_t slave_addr, 
-                                            uint8_t cmd, 
-                                            uint16_t reg_start, 
-                                            uint16_t reg_size)
+mb_data ModbusMaster::getRequest(uint8_t slave_addr, 
+                                uint8_t cmd, 
+                                uint16_t reg_start, 
+                                uint16_t reg_size)
 {
-    std::byte ret[reg_size*2];
-    data_t data;
+    mb_data data(reg_size*2); // Modbus length is 1 word = 2 bytes
 
     mb_param_request_t req = {
         .slave_addr = slave_addr,              // the slave UID to send the request
@@ -125,44 +124,40 @@ ModbusMaster::data_t ModbusMaster::getRequest(uint8_t slave_addr,
         .reg_size = reg_size   // length of the data to receive (registers)
     };
 
-     esp_err_t err = mbc_master_send_request(_master_handle, &req, (void*) ret);
-
+    esp_err_t err = mbc_master_send_request(_master_handle, &req, data.buffer());
 
     if (err == ESP_OK) {
         ESP_LOGV(MODBUS_TAG, "sendRequest read successful - data: 0x %02x %02x ",
-                ret[0], ret[1]);
-        data_t data(ret, ret + sizeof(ret) / sizeof(ret[0]));
+                data.getByte(0), data.getByte(1));
         return data;
     } else {
         ESP_LOGE(MODBUS_TAG, "Request read fail, err = 0x%x (%s).",                      
                             (int)err,                                                             
-                            (char *)esp_err_to_name(err));     
+                            (char*)esp_err_to_name(err));     
     }
 
 
-    return data_t();
+    return mb_data();
 }
 
-int16_t ModbusMaster::getInt(data_t data)
-{
-    if (data.size()==1)
-        return (int16_t)(data.at(0));
-
-    if (data.size()<1)
-        return 0;
-    
-    return (int16_t)((u_char)(data.at(0)) | (u_char)(data.at(1)) << 8);
-}
 
 void ModbusMaster::testRequest()
 {
     
+    ESP_LOGI(MODBUS_TAG, "Testing setValue 2117");
+    mb_data test;
+    test = 2117;
+    ESP_LOGV(MODBUS_TAG, "size is %d", test.getSize());
+    ESP_LOGV(MODBUS_TAG, "value is 0x %02x %02x", test.getByte(0), test.getByte(1));
+    ESP_LOGV(MODBUS_TAG, "value in dec %d", (int16_t)test);
+
+
     ESP_LOGI(MODBUS_TAG, "sendRequest TEST");
-    data_t ret = getRequest(2, CMD_READ_HOLDING_REGISTER, 0x15E, 1);
-    ESP_LOGV(MODBUS_TAG, "Slave answer %d :", getInt(ret));
-    for (auto i: ret) {
-      	ESP_LOGV(MODBUS_TAG, "0x%02x", i);
-    }
+    mb_data ret = getRequest(2, CMD_READ_HOLDING_REGISTER, 0x15E, 1);
+    ESP_LOGV(MODBUS_TAG, "Slave answer %d :", (int16_t)ret);
+
+    for(uint i = 0; i < ret.getSize(); ++i)
+        ESP_LOGV(MODBUS_TAG, "0x%02x", ret.getByte(i));
 
 
     ret = getRequest(2, CMD_READ_HOLDING_REGISTER, 0x15C, 1);

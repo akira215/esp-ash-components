@@ -7,8 +7,7 @@
 
 #pragma once
 
-#include <cstddef>
-#include <vector>
+#include "mb_data.h"
 #include "esp_modbus_master.h"
 //#include "mbcontroller.h"
 
@@ -42,8 +41,6 @@ class ModbusMaster
         CMD_ERROR                       = ( 0x80 )
     };
 
-    public:
-        typedef std::vector<std::byte> data_t;
 
     public:
         /// @brief Constructor
@@ -77,13 +74,11 @@ class ModbusMaster
         /// @param reg_start: address of the register on the slave
         /// @param reg_size: length (in word i.e. 2 bytes or 16 bits) of slave register
         /// @param return:  Answer from slave
-        data_t getRequest(uint8_t slave_addr, 
+        mb_data getRequest(uint8_t slave_addr, 
                             uint8_t cmd, 
                             uint16_t reg_start, 
                             uint16_t reg_size);
 
-        static int16_t getInt(data_t data);
-        
         #ifdef CONFIG_MB_UART_DEBUG
             /// @brief Debug handler to read message on Modbus line
             static mb_exception_t debug_handler(void *inst, uint8_t *frame_ptr, uint16_t *len);
