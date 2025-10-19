@@ -19,7 +19,6 @@
 class ModbusMaster
 {
     void *_master_handle = nullptr;
-    mb_parameter_descriptor_t *_device_parameters = nullptr;
 
     enum mb_command
     {   
@@ -66,7 +65,7 @@ class ModbusMaster
                     uart_mode_t uart_mode = UART_MODE_RS485_HALF_DUPLEX);
         ~ModbusMaster();
 
-        void testRequest(); // TODEL
+        
 
         /// @brief send a get request to a slave
         /// @param slave_addr: slave adress on the bus taht request will be send to
@@ -78,6 +77,36 @@ class ModbusMaster
                             uint8_t cmd, 
                             uint16_t reg_start, 
                             uint16_t reg_size);
+        
+        /// @brief read register from slave
+        /// @param slave_addr: slave adress on the bus taht request will be send to
+        /// @param reg_start: address of the register on the slave
+        /// @param reg_size: length (in word i.e. 2 bytes or 16 bits) of slave register
+        /// @param return:  bytes from slave
+        mb_data readRegisters(uint8_t slave_addr, 
+                                uint16_t reg_start, 
+                                uint16_t reg_size);
+        
+        
+        /// @brief send a get request to a slave
+        /// @param slave_addr: slave adress on the bus taht request will be send to
+        /// @param cmd: Modbus command
+        /// @param reg_start: address of the register on the slave
+        /// @param data: data to be written
+        void setRequest(uint8_t slave_addr, 
+                            uint8_t cmd, 
+                            uint16_t reg_start, 
+                            mb_data data);
+        
+        /// @brief read register from slave
+        /// @param slave_addr: slave adress on the bus taht request will be send to
+        /// @param reg_start: address of the register on the slave
+        /// @param params: data to be written
+        void writeRegisters(uint8_t slave_addr, 
+                                uint16_t reg_start, 
+                                mb_data data);
+
+        void testRequest(); // TODEL
 
         #ifdef CONFIG_MB_UART_DEBUG
             /// @brief Debug handler to read message on Modbus line

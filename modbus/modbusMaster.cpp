@@ -127,8 +127,9 @@ mb_data ModbusMaster::getRequest(uint8_t slave_addr,
     esp_err_t err = mbc_master_send_request(_master_handle, &req, data.buffer());
 
     if (err == ESP_OK) {
-        ESP_LOGV(MODBUS_TAG, "sendRequest read successful - data: 0x %02x %02x ",
-                data.getByte(0), data.getByte(1));
+        ESP_LOGD(MODBUS_TAG, "sendRequest read successful @ 0x%02x", reg_start);
+            for (int i=0; i < data.getSize();++i)
+                ESP_LOGV(MODBUS_TAG, "0x%02x", data.getByte(i));
         return data;
     } else {
         ESP_LOGE(MODBUS_TAG, "Request read fail, err = 0x%x (%s).",                      
@@ -136,17 +137,64 @@ mb_data ModbusMaster::getRequest(uint8_t slave_addr,
                             (char*)esp_err_to_name(err));     
     }
 
-
     return mb_data();
 }
 
 
+mb_data ModbusMaster::readRegisters(uint8_t slave_addr, 
+                                    uint16_t reg_start, 
+                                    uint16_t reg_size)
+{
+    return getRequest(slave_addr, CMD_READ_HOLDING_REGISTER, reg_start, reg_size);
+}
+
+void ModbusMaster::setRequest(uint8_t slave_addr, 
+                                uint8_t cmd, 
+                                uint16_t reg_start, 
+                                mb_data data)
+{
+    uint16_t reg_size = (uint16_t)(data.getSize()/2);
+    //mb_data data(reg_size*2); // Modbus length is 1 word = 2 bytes
+
+    mb_param_request_t req = {
+        .slave_addr = slave_addr,              // the slave UID to send the request
+        .command = cmd,                            // read holding 0x04 read input,
+        .reg_start = reg_start,                             // unused,
+        .reg_size = reg_size   // length of the data to receive (registers)
+    };
+
+    esp_err_t err = mbc_master_send_request(_master_handle, &req, data.buffer());
+
+    if (err == ESP_OK) {
+        ESP_LOGD(MODBUS_TAG, "sendRequest write successful @ 0x%02x", reg_start);
+            for (int i=0; i < data.getSize();++i)
+                ESP_LOGV(MODBUS_TAG, "0x%02x", data.getByte(i));
+
+    } else {
+        ESP_LOGE(MODBUS_TAG, "Request write fail, err = 0x%x (%s).",                      
+                            (int)err,                                                             
+                            (char*)esp_err_to_name(err));     
+    }
+
+}
+
+void ModbusMaster::writeRegisters(uint8_t slave_addr, 
+                                uint16_t reg_start, 
+                                mb_data data)
+{
+    setRequest(slave_addr, CMD_WRITE_MULTIPLE_REGISTERS, reg_start, data);
+}
+
+
+// TODEL
 void ModbusMaster::testRequest()
 {
     
     ESP_LOGI(MODBUS_TAG, "Testing setValue 2117");
     mb_data test;
-    test = 2117;
+    test = 2117;    // Assignement shall be done in separate line
+                    // COnstructor param is size not value !
+
     ESP_LOGV(MODBUS_TAG, "size is %d", test.getSize());
     ESP_LOGV(MODBUS_TAG, "value is 0x %02x %02x", test.getByte(0), test.getByte(1));
     ESP_LOGV(MODBUS_TAG, "value in dec %d", (int16_t)test);
@@ -161,58 +209,6 @@ void ModbusMaster::testRequest()
 
 
     ret = getRequest(2, CMD_READ_HOLDING_REGISTER, 0x15C, 1);
-    
-    int16_t response = -1;
-
-    mb_param_request_t req = {
-        .slave_addr = 2,              // the slave UID to send the request
-        .command = CMD_READ_HOLDING_REGISTER,                            // read holding 0x04 read input,
-        .reg_start = 0x15E,                             // unused,
-        .reg_size = 1   // length of the data to receive (registers)
-    };
-
-    esp_err_t err = mbc_master_send_request(_master_handle, &req, &response);
-
-
-    if (err == ESP_OK) {
-        ESP_LOGI(MODBUS_TAG, "T_outdoor_air read successful - data: %d ",
-                response);
-    } else {
-        ESP_LOGE(MODBUS_TAG, "Request read fail, err = 0x%x (%s).",                      
-                            (int)err,                                                             
-                            (char *)esp_err_to_name(err));     
-    }
-
-    /////////////////////////////////////////////////////////////////////////////////////
-
-    req.reg_start = 0x15F;
-
-    err = mbc_master_send_request(_master_handle, &req, &response);
-
-
-    if (err == ESP_OK) {
-        ESP_LOGI(MODBUS_TAG, "T_extract_air read successful - data: %d ",
-                response);
-    } else {
-        ESP_LOGE(MODBUS_TAG, "Request read fail, err = 0x%x (%s).",                      
-                            (int)err,                                                             
-                            (char *)esp_err_to_name(err));
-    }
-    /////////////////////////////////////////////////////////////////////////////////////
-
-    req.reg_start = 0x15C;
-
-    err = mbc_master_send_request(_master_handle, &req, &response);
-
-
-    if (err == ESP_OK) {
-        ESP_LOGI(MODBUS_TAG, "Bypass position read successful - data: %d ",
-                response);
-    } else {
-        ESP_LOGE(MODBUS_TAG, "Request read fail, err = 0x%x (%s).",                      
-                            (int)err,                                                             
-                            (char *)esp_err_to_name(err));
-    }
-                            
+                         
 }
 

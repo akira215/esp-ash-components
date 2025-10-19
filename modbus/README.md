@@ -35,6 +35,43 @@ endmenu
 if `CONFIG_ZB_LED` is set to -1 or not defined, no led will be used by the library.
 
 
+
+## Code example
+
+```
+    ESP_LOGI(MODBUS_TAG, "Testing setValue 2117");
+    mb_data test;
+    test = 2117;    // Assignement shall be done in separate line
+                    // COnstructor param is size not value !
+                    
+    ESP_LOGV(MODBUS_TAG, "size is %d", test.getSize());
+    ESP_LOGV(MODBUS_TAG, "value is 0x %02x %02x", test.getByte(0), test.getByte(1));
+    ESP_LOGV(MODBUS_TAG, "value in dec %d", (int16_t)test);
+
+
+    mb_data gen_data = _mb_master->readRegisters(AldesModbus::MB_ALDES_ADDR,
+                                            AldesModbus::REG_PRODUCT_CODE,
+                                            6);
+                                        
+    if (gen_data.getSize() > 0)
+        _product_code = gen_data;
+
+    ESP_LOGD(ALDES_TAG, "Product Code : %d - %s", 
+                    _product_code, aldesDeviceFromCode(_product_code));
+
+    _serial_num = gen_data.getDataFrom(4);
+
+    ESP_LOGD(ALDES_TAG, "Serial Number : %d ", _serial_num);
+
+    mb_data firm_ver = _mb_master->readRegisters(AldesModbus::MB_ALDES_ADDR,
+                                            AldesModbus::REG_SOFT_VERSION,
+                                            1);
+    if (firm_ver.getSize() > 0)
+        _firm_ver = firm_ver;
+
+    ESP_LOGD(ALDES_TAG, "Firmware version : %d", _firm_ver);
+```
+
 ## Current Status
 
 Still work in progress, but is completely running. All bugs 
