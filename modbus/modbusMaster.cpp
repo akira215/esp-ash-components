@@ -59,6 +59,7 @@ ModbusMaster::ModbusMaster(mb_comm_mode_t mode,
     comm.ser_opts.response_tout_ms = timeout;
     comm.ser_opts.uid = 0; // dummy port for master
 
+
     esp_err_t err = mbc_master_create_serial(&comm, &_master_handle);
     if (_master_handle == nullptr)
         ESP_LOGE(MODBUS_TAG,"mb controller initialization fail, null handle.");
@@ -91,9 +92,15 @@ ModbusMaster::ModbusMaster(mb_comm_mode_t mode,
     if (err != ESP_OK)
         ESP_LOGE(MODBUS_TAG,"mb serial set pin failure, uart_set_pin() returned (0x%x).", (int)err);                     
    
+    // Set a dump descriptor as it is required to start master mb
+    err = mbc_master_set_descriptor(_master_handle,_descriptor,2);
+    if (err != ESP_OK)
+        ESP_LOGE(MODBUS_TAG,"mb controller set empty descriptor fail, returned (0x%x).", (int)err);
+
+
     err = mbc_master_start(_master_handle);
     if (err != ESP_OK)
-        ESP_LOGE(MODBUS_TAG,"mb controller start fail, returned (0x%x).", (int)err);                
+        ESP_LOGE(MODBUS_TAG,"mb controller start fail, returned (0x%x).", (int)err);    
    
     // Set driver mode to Half Duplex
     err = uart_set_mode(port, uart_mode);
@@ -185,30 +192,4 @@ void ModbusMaster::writeRegisters(uint8_t slave_addr,
     setRequest(slave_addr, CMD_WRITE_MULTIPLE_REGISTERS, reg_start, data);
 }
 
-
-// TODEL
-void ModbusMaster::testRequest()
-{
-    
-    ESP_LOGI(MODBUS_TAG, "Testing setValue 2117");
-    mb_data test;
-    test = 2117;    // Assignement shall be done in separate line
-                    // COnstructor param is size not value !
-
-    ESP_LOGV(MODBUS_TAG, "size is %d", test.getSize());
-    ESP_LOGV(MODBUS_TAG, "value is 0x %02x %02x", test.getByte(0), test.getByte(1));
-    ESP_LOGV(MODBUS_TAG, "value in dec %d", (int16_t)test);
-
-
-    ESP_LOGI(MODBUS_TAG, "sendRequest TEST");
-    mb_data ret = getRequest(2, CMD_READ_HOLDING_REGISTER, 0x15E, 1);
-    ESP_LOGV(MODBUS_TAG, "Slave answer %d :", (int16_t)ret);
-
-    for(uint i = 0; i < ret.getSize(); ++i)
-        ESP_LOGV(MODBUS_TAG, "0x%02x", ret.getByte(i));
-
-
-    ret = getRequest(2, CMD_READ_HOLDING_REGISTER, 0x15C, 1);
-                         
-}
 

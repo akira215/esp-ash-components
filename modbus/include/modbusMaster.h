@@ -8,17 +8,25 @@
 #pragma once
 
 #include "mb_data.h"
-#include "esp_modbus_master.h"
-//#include "mbcontroller.h"
+//#include "esp_modbus_master.h"
+#include "mbcontroller.h"
 
-//#include "mb_objects/include/mb_proto.h"
 
-// Helper macros for dictionary
 
+// Dump descriptor 
+const mb_parameter_descriptor_t _descriptor[] = {
+// CID, Name, Units, Modbus addr, register type, Modbus Reg Start Addr, Modbus Reg read length,
+// Instance offset (NA), Instance type, Instance length (bytes), Options (NA), Permissions
+    { 0, (const char*)("Serial_number_1"), (const char*)("--"), 1, MB_PARAM_INPUT, 0, 2,
+                0, PARAM_TYPE_U16, 4, { .opt1 = 0, .opt2 = 0, .opt3 = 0 }, PAR_PERMS_READ_WRITE_TRIGGER },
+    { 1, (const char*)("Software_version_1"), (const char*)("--"), 1, MB_PARAM_INPUT, 2, 1,
+                0, PARAM_TYPE_U16, 2, { .opt1 = 0, .opt2 = 0, .opt3 = 0 }, PAR_PERMS_READ_WRITE_TRIGGER },
+};
 
 class ModbusMaster
 {
-    void *_master_handle = nullptr;
+    void* _master_handle = nullptr;
+
 
     enum mb_command
     {   
@@ -105,8 +113,6 @@ class ModbusMaster
         void writeRegisters(uint8_t slave_addr, 
                                 uint16_t reg_start, 
                                 mb_data data);
-
-        void testRequest(); // TODEL
 
         #ifdef CONFIG_MB_UART_DEBUG
             /// @brief Debug handler to read message on Modbus line
