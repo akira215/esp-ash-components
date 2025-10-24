@@ -30,13 +30,13 @@ public:
     /// to pass args to the function, use std::bind
     /// @param func pointer to the method ex: &Main::task
     /// @param instance instance of the object for this handler (ex: this)
-    template<typename C>
-    ScheduledTask(void (C::* func)(), C* instance, 
+    template<typename C, typename... Args>
+    ScheduledTask(void (C::* func)(Args... args), C* instance,
                     uint64_t delay_ms, 
                     std::string name = std::string("scheduledTask"),
-                    bool autoDelete = true) :
+                    bool autoDelete = true, Args... args) :
                         _name(name), _autoDelete(autoDelete) {
-        _func = std::bind(func,std::ref(*instance));
+        _func = std::bind(func,std::ref(*instance), args...);
         startTimer(delay_ms);
     }
     ~ScheduledTask();

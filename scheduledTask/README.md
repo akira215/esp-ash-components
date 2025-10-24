@@ -27,11 +27,19 @@ could be reported to try to improve it.
 
 ## Usage and Examples
 
-use std::bind to pass argument to callback if required
+To pass argument to callback if required, it shall be after all arg list
 
 ```cpp
 
 ScheduledTask* task = new ScheduledTask(&ZbNode::joinNetwork, this, delay_ms);
+
+ // with arguments
+ScheduledTask* testTask = new ScheduledTask(&AldesDriver::setFilterTimer, this, 
+                                            10000, std::string("testFilters"), true, (uint16_t)10);
+
+....
+
+void AldesDriver::setFilterTimer(uint16_t remaining_days)
 ```
 
 ## Changes

@@ -155,7 +155,7 @@ mb_data ModbusMaster::readRegisters(uint8_t slave_addr,
     return getRequest(slave_addr, CMD_READ_HOLDING_REGISTER, reg_start, reg_size);
 }
 
-void ModbusMaster::setRequest(uint8_t slave_addr, 
+bool ModbusMaster::setRequest(uint8_t slave_addr, 
                                 uint8_t cmd, 
                                 uint16_t reg_start, 
                                 mb_data data)
@@ -176,20 +176,22 @@ void ModbusMaster::setRequest(uint8_t slave_addr,
         ESP_LOGD(MODBUS_TAG, "sendRequest write successful @ 0x%02x", reg_start);
             for (int i=0; i < data.getSize();++i)
                 ESP_LOGV(MODBUS_TAG, "0x%02x", data.getByte(i));
-
+        return true;
     } else {
         ESP_LOGE(MODBUS_TAG, "Request write fail, err = 0x%x (%s).",                      
                             (int)err,                                                             
                             (char*)esp_err_to_name(err));     
     }
 
+    return false;
+
 }
 
-void ModbusMaster::writeRegisters(uint8_t slave_addr, 
+bool ModbusMaster::writeRegisters(uint8_t slave_addr, 
                                 uint16_t reg_start, 
                                 mb_data data)
 {
-    setRequest(slave_addr, CMD_WRITE_MULTIPLE_REGISTERS, reg_start, data);
+    return setRequest(slave_addr, CMD_WRITE_MULTIPLE_REGISTERS, reg_start, data);
 }
 
 

@@ -101,7 +101,8 @@ class ModbusMaster
         /// @param cmd: Modbus command
         /// @param reg_start: address of the register on the slave
         /// @param data: data to be written
-        void setRequest(uint8_t slave_addr, 
+        /// @return true if succeed, false otherwise
+        bool setRequest(uint8_t slave_addr, 
                             uint8_t cmd, 
                             uint16_t reg_start, 
                             mb_data data);
@@ -110,7 +111,8 @@ class ModbusMaster
         /// @param slave_addr: slave adress on the bus taht request will be send to
         /// @param reg_start: address of the register on the slave
         /// @param params: data to be written
-        void writeRegisters(uint8_t slave_addr, 
+        /// @return true if succeed, false otherwise
+        bool writeRegisters(uint8_t slave_addr, 
                                 uint16_t reg_start, 
                                 mb_data data);
 
