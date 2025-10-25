@@ -50,7 +50,7 @@ uint8_t ZbEndPoint::getId()
 
 void ZbEndPoint::addCluster(ZbCluster* cluster)
 {
-    ESP_LOGV(ZEP_TAG, "Adding Cluster Id: %d", cluster->getId());
+    ESP_LOGV(ZEP_TAG, "%d - Adding Cluster Id: %d", getId(), cluster->getId());
 
     cluster->addToList(_cluster_list);
     
