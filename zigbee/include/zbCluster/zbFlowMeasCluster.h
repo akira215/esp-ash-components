@@ -36,16 +36,12 @@ public:
     {
         esp_zb_flow_meas_cluster_cfg_t cfg;
 
-        // ********************************************
-        // In ZCL spec rev 8 attributes are all uint16_t, 
-        // nevertheless int esp_zigbee_type.h v1.6.6, they are int16_t
-        //  ********************************************
         cfg.measured_value  = 
-                *((int16_t*)(other.getAttribute((uint16_t)
+                *((uint16_t*)(other.getAttribute((uint16_t)
                     ESP_ZB_ZCL_ATTR_FLOW_MEASUREMENT_VALUE_ID)->data_p));
-        cfg.min_value = *((int16_t*)(other.getAttribute((uint16_t)
+        cfg.min_value = *((uint16_t*)(other.getAttribute((uint16_t)
                     ESP_ZB_ZCL_ATTR_FLOW_MEASUREMENT_MIN_VALUE_ID)->data_p));
-        cfg.max_value = *((int16_t*)(other.getAttribute((uint16_t)
+        cfg.max_value = *((uint16_t*)(other.getAttribute((uint16_t)
                     ESP_ZB_ZCL_ATTR_FLOW_MEASUREMENT_MAX_VALUE_ID)->data_p));   
 
         _attr_list = esp_zb_flow_meas_cluster_create(&cfg);
