@@ -159,7 +159,7 @@ public:
     esp_zb_zcl_cluster_t* getClusterStruct();
 
     void attributeWasSet(uint16_t attr_id, void* value);
-    bool setAttribute(uint16_t attr_id, void* value);
+    bool setAttribute(uint16_t attr_id, void* value, uint16_t manuf_code = 0);
 
     // cmd that initiated the event from external device
     void defaultCommandTriggered(uint8_t cmd);

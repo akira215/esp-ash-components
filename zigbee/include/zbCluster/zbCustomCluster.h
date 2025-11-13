@@ -18,7 +18,7 @@ public:
     /// @brief Custom Cluster constructor
     /// @param isClient 
     /// @param clusterId shall be > 0x8000
-    ZbCustomCluster( bool isClient = false, uint16_t clusterId ) 
+    ZbCustomCluster( bool isClient = false, uint16_t clusterId = 0xfc00 ) 
     {                                                                     
         _attr_list = esp_zb_zcl_attr_list_create(clusterId);
 
@@ -42,6 +42,10 @@ public:
                 ESP_ZB_ZCL_ATTR_TYPE_NULL, ESP_ZB_ZCL_ATTR_ACCESS_INTERNAL);
     }
 
+    /// @brief Custom attribute 
+    /// @param attr_id attribute id in the cluster
+    /// @param attr_type refer to esp_zb_zcl_attr_type_t
+    /// @param attr_access  refer to esp_zb_zcl_attr_access_t
     virtual void addCustomAttribute(uint16_t attr_id, void* value, 
                 uint8_t attr_type, uint8_t attr_access, uint16_t manuf_code = 0)
     {

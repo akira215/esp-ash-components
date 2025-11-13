@@ -143,21 +143,41 @@ bool ZbCluster::isServer() const
 }
 
 
-bool ZbCluster::setAttribute(uint16_t attr_id, void* value)
+bool ZbCluster::setAttribute(uint16_t attr_id, void* value, uint16_t manuf_code)
 {
     ESP_LOGV(ZCLUSTER_TAG, "setAttribute Endpoint (%d), Cluster (%d), attr (%d)",
             getEndpointId(), getId(), attr_id);
     
-    esp_zb_lock_acquire(portMAX_DELAY);
+    esp_zb_zcl_status_t res = ESP_ZB_ZCL_STATUS_FAIL;
+    
+    if (manuf_code) {
+        esp_zb_lock_acquire(portMAX_DELAY);
 
-    esp_zb_zcl_status_t res = esp_zb_zcl_set_attribute_val(getEndpointId(),
-                 getId(), 
-                 isClient() ? ESP_ZB_ZCL_CLUSTER_CLIENT_ROLE : 
-                                ESP_ZB_ZCL_CLUSTER_SERVER_ROLE, 
-                 attr_id, 
-                 value, 
-                 false);
-    esp_zb_lock_release();
+        res = esp_zb_zcl_set_manufacturer_attribute_val(getEndpointId(),
+                    getId(), 
+                    isClient() ? ESP_ZB_ZCL_CLUSTER_CLIENT_ROLE : 
+                                    ESP_ZB_ZCL_CLUSTER_SERVER_ROLE,
+                    manuf_code,         
+                    attr_id, 
+                    value, 
+                    false);
+        esp_zb_lock_release();
+        
+        ESP_LOGW(ZCLUSTER_TAG, "setCustomAttribute Endpoint (%d), Cluster (%d), attr (%d) manuf (%d)",
+            getEndpointId(), getId(), attr_id, manuf_code);
+
+    } else {
+        esp_zb_lock_acquire(portMAX_DELAY);
+
+        res = esp_zb_zcl_set_attribute_val(getEndpointId(),
+                    getId(), 
+                    isClient() ? ESP_ZB_ZCL_CLUSTER_CLIENT_ROLE : 
+                                    ESP_ZB_ZCL_CLUSTER_SERVER_ROLE, 
+                    attr_id, 
+                    value, 
+                    false);
+        esp_zb_lock_release();
+    }
 
     return res == ESP_ZB_ZCL_STATUS_SUCCESS; 
 }
