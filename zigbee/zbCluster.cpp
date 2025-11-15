@@ -144,10 +144,7 @@ bool ZbCluster::isServer() const
 
 
 bool ZbCluster::setAttribute(uint16_t attr_id, void* value, uint16_t manuf_code)
-{
-    ESP_LOGV(ZCLUSTER_TAG, "setAttribute Endpoint (%d), Cluster (%d), attr (%d)",
-            getEndpointId(), getId(), attr_id);
-    
+{ 
     esp_zb_zcl_status_t res = ESP_ZB_ZCL_STATUS_FAIL;
     
     if (manuf_code) {
@@ -163,7 +160,7 @@ bool ZbCluster::setAttribute(uint16_t attr_id, void* value, uint16_t manuf_code)
                     false);
         esp_zb_lock_release();
         
-        ESP_LOGW(ZCLUSTER_TAG, "setCustomAttribute Endpoint (%d), Cluster (%d), attr (%d) manuf (%d)",
+        ESP_LOGV(ZCLUSTER_TAG, "setCustomAttribute Endpoint (%d), Cluster (%d), attr (%d) manuf (%d)",
             getEndpointId(), getId(), attr_id, manuf_code);
 
     } else {
@@ -177,6 +174,9 @@ bool ZbCluster::setAttribute(uint16_t attr_id, void* value, uint16_t manuf_code)
                     value, 
                     false);
         esp_zb_lock_release();
+
+        ESP_LOGV(ZCLUSTER_TAG, "setAttribute Endpoint (%d), Cluster (%d), attr (%d)",
+            getEndpointId(), getId(), attr_id);
     }
 
     return res == ESP_ZB_ZCL_STATUS_SUCCESS; 
