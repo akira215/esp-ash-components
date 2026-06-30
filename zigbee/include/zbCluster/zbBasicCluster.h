@@ -8,7 +8,7 @@
 #pragma once
 
 #include "zbCluster.h"
-#include "zcl\esp_zigbee_zcl_basic.h"
+#include "zcl/esp_zigbee_zcl_basic.h"
 
 
 class ZbBasicCluster : public ZbCluster

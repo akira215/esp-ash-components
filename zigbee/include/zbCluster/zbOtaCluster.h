@@ -11,7 +11,7 @@
 
 #include <esp_log.h> // TODEL development purpose
 
-#include "zcl\esp_zigbee_zcl_ota.h"
+#include "zcl/esp_zigbee_zcl_ota.h"
 
 
 class ZbOtaCluster : public ZbCluster

@@ -8,7 +8,7 @@
 #pragma once
 
 #include "zbCluster.h"
-#include "zcl\esp_zigbee_zcl_analog_value.h"
+#include "zcl/esp_zigbee_zcl_analog_value.h"
 
 
 class ZbAnalogValueCluster : public ZbCluster
