@@ -37,4 +37,4 @@ private:
     /// @brief Constructor is private (singleton)
     MatterNode();
  
-}
+};
