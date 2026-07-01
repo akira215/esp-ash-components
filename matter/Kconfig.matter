@@ -1,0 +1,15 @@
+menu "Matter Device"
+    
+    config ROOT_NODE_NAME
+        string "Root node name"
+        default "Root Label Name"
+        help
+            Maximum 33 characters
+
+    config K_TIMEOUT
+        int "Commissioning window timeout in seconds"
+        range 0 65000
+        default 300
+        help
+            This is the duration of the commissioning window after resetting to factory state
+endmenu
