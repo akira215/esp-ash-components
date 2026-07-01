@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <esp_matter.h>
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h" // for task handle
