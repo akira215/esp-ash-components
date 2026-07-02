@@ -5,7 +5,8 @@ if(STRING_LEN GREATER 33)
 endif()
 
 
-set(SOURCES matterNode.cpp)
+set(SOURCES matterNode.cpp
+            matterEndpoint.cpp)
             
 idf_component_register(SRCS ${SOURCES}
                     INCLUDE_DIRS include

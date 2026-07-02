@@ -21,6 +21,7 @@
 
 #include <string>
 
+static const char *MATTER_NODE_TAG = "MatterNode";
 
 // Static
 esp_err_t MatterNode::identification_cb(esp_matter::identification::callback_type_t type, uint16_t endpoint_id, uint8_t effect_id,
@@ -141,6 +142,19 @@ MatterNode::~MatterNode()
 {
     //TODO del all mEndPoint objects
 }
+/*
+template <typename T>
+MatterEndpoint* MatterNode::createEnpoint(T& config)
+{
+    MatterEndpoint* endpoint = new MatterEndpoint(this);
+
+    setConfig(_node, config);
+
+    _endpoints.push_back(endpoint);
+
+    return endpoint;
+}
+    */
 
 void MatterNode::start()
 {

@@ -12,7 +12,11 @@
 
 #include "esp_matter_attribute_utils.h"
 //#include "freertos/FreeRTOS.h"
-#include "freertos/task.h" // for task handle
+//#include "freertos/task.h" // for task handle
+
+#include "matterEndpoint.h"
+#include <vector>
+
 
 #if CHIP_DEVICE_CONFIG_ENABLE_THREAD
 #include "esp_openthread_types.h"
@@ -52,13 +56,12 @@
 #define CHIP_DEVICE_CONFIG_DEFAULT_NODE_LABEL "Akira Node"
 */
 
-static const char *MATTER_NODE_TAG = "MatterNode";
-
 
 // Singleton class to manage matter node
 class MatterNode
 {
     esp_matter::node_t* _node = nullptr;
+    std::vector<MatterEndpoint*> _endpoints;
 
 public:
   
@@ -74,7 +77,19 @@ public:
     static MatterNode* getInstance();
 
     // TODEL
-    esp_matter::node_t* getNode() { return _node; };
+    esp_matter::node_t* getEspNode() { return _node; };
+
+    // Create an Endpoint
+    template <typename T>
+    MatterEndpoint* createEndpoint(T& config){
+        MatterEndpoint* endpoint = new MatterEndpoint(this);
+
+        endpoint->create_endpoint(_node, &config);
+        _endpoints.push_back(endpoint);
+
+        return endpoint;
+    }
+        
 
     void start();
 
