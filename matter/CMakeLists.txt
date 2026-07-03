@@ -6,7 +6,9 @@ endif()
 
 
 set(SOURCES matterNode.cpp
-            matterEndpoint.cpp)
+            matterEndpoint.cpp
+            matterCluster.cpp
+            matterAttribute.cpp)
             
 idf_component_register(SRCS ${SOURCES}
                     INCLUDE_DIRS include

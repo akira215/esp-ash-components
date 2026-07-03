@@ -20,14 +20,19 @@ MatterEndpoint::~MatterEndpoint()
     // TODO remove attribute and endpoints
 }
 
-/*
-template <typename T>
-void MatterEndpoint::setConfig(T& config, uint8_t flags) 
+void MatterEndpoint::populate_cluster_map()
 {
-    // Le compilateur cherche 'process' dans le namespace de T
-    decltype(auto) ep = create(_node->getNode(), config, flags); 
-    if (ep != nullptr) {
-        ESP_LOGE(TAG, "Failed to create endpoint");
+    esp_matter::cluster_t* cluster = esp_matter::cluster::get_first(_endpoint);
+
+    while (cluster != nullptr) {
+
+        MatterCluster* matter_cluster = new MatterCluster(this, cluster);
+
+        _vClusters.push_back(matter_cluster);
+        ESP_LOGD(TAG, "Added cluster with ID %u to endpoint %d", matter_cluster->getClusterId(), getEndpointId());
+        
+        // Move to the next cluster structure
+        cluster = esp_matter::cluster::get_next(cluster);
     }
 }
-*/
+
