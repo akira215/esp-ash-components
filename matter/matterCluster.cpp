@@ -6,6 +6,7 @@
 */
 
 #include "matterCluster.h"
+#include <matterAttribute.h>
 #include "esp_matter_data_model.h"
 #include <matterEndpoint.h>
 

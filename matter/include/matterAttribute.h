@@ -48,35 +48,38 @@ public:
     MatterAttribute(MatterCluster* cluster, esp_matter::attribute_t* attribute);
     ~MatterAttribute();
 
-    uint32_t getAttributeId() { return esp_matter::attribute::get_id(_attribute); }
-    uint16_t getFlags() { return esp_matter::attribute::get_flags(_attribute); }
+    uint32_t getAttributeId() { 
+        if (_attribute)
+            return esp_matter::attribute::get_id(_attribute); 
+        return (uint32_t)(-1);
+    }
+
+    uint16_t getFlags() { 
+        if (_attribute)
+            return esp_matter::attribute::get_flags(_attribute); 
+        return (uint16_t)(-1);
+    }
+
+    MatterCluster* getCluster() {
+        return _cluster;
+    }
+
 
     void setDeferredPersistence(bool enable = true);
 
     esp_matter::attribute_t* getEspAttribute() { return _attribute; }
     
     /// @brief register attribute update handler for this attribute.
-    /// Update handler shall be type clusterCallback_t : 
-    /// void(eventType, uint16_t attrId, void* value) 
+    /// Update handler shall be type attrUpdateCallback_t : 
+    /// void(esp_matter::attribute::callback_type_t, esp_matter_attr_val_t*,void*) 
     /// @param func pointer to the method ex: &Main::clusterHandler
     /// @param instance instance of the object for this handler (ex: this)
-    ///template<typename C, typename... Args>
-    ///void registerEventHandler(void (C::* func)(Args...), C* instance) {
-    ///    _clusterEventHandlers.push_back(std::bind(func,std::ref(*instance),
-    ///       std::placeholders::_1,
-    ///        std::placeholders::_2,
-    ///        std::placeholders::_3));
-    ///};
-    /*
     template<typename C, typename... Args>
-    void registerAttrUpdateHandler(void (C::* func)(Args...), C* instance) {
-        // A lambda captures the function pointer and instance, 
-        // and forwards any number of incoming arguments using a parameter pack.
-        _attrUpdateHandlers.push_back([instance, func](Args&&... args) {
-            (instance->*func)(std::forward<Args>(args)...);
-        });
-    }
-        */
+    void registerAttrUpdateHandler(void (C::* func)(Args...), C* instance);
+        
 
 };
+
+// Include the implementation at the very bottom
+#include "matterAttribute_impl.tpp" 
 

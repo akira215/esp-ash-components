@@ -8,6 +8,7 @@
 #pragma once
 
 #include "esp_matter_data_model.h"
+#include <cstdint>
 #include <esp_matter_endpoint.h>
 #include <esp_log.h>
 #include "../utils/common_macros.h"
@@ -90,7 +91,11 @@ public:
     }
 
     esp_matter::endpoint_t* getEspEndpoint() { return _endpoint; }
-    uint16_t getEndpointId() { return esp_matter::endpoint::get_id(_endpoint); } 
+    uint16_t getEndpointId() { 
+        if(_endpoint)
+            return esp_matter::endpoint::get_id(_endpoint); 
+        return (uint16_t)(-1);
+    } 
 
     // If flags = esp_matter::CLUSTER_FLAG_NONE, the first cluster is returned
     MatterCluster* getCluster(uint32_t clusterId);

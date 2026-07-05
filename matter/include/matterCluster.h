@@ -9,7 +9,7 @@
 
 
 #include <esp_matter_endpoint.h>
-#include <matterAttribute.h>
+
 #include <unordered_map>
 
 
@@ -17,6 +17,7 @@
 
 
 class MatterEndpoint;
+class MatterAttribute;
 
 /// @brief Matter Cluster class
 /// store maps of cluster and cluster list as per SDK requirements
@@ -52,7 +53,7 @@ class MatterCluster
         esp_matter::cluster::initialization_callback_t init_callback;
         esp_matter::cluster::shutdown_callback_t shutdown_callback;
         chip::DataVersion data_version;
-        _attribute_base_t *attribute_list; /* If attribute is managed internally, the actual pointer type is
+        void *attribute_list; /* If attribute is managed internally, the actual pointer type is
                                         _internal_attribute_t. When operating attribute_list, do check the flags first! */
         command_t *command_list;
         event_t *event_list;
@@ -65,8 +66,23 @@ public:
     MatterCluster(MatterEndpoint* enpoint, esp_matter::cluster_t* cluster);
     ~MatterCluster();
 
-    uint32_t getClusterId() { return esp_matter::cluster::get_id(_cluster); }
-    uint8_t  getFlags()     { return esp_matter::cluster::get_flags(_cluster);}
+
+    MatterEndpoint* getEndpoint() {
+        return _endpoint;
+    }
+
+    uint32_t getClusterId() { 
+        if (_cluster)
+            return esp_matter::cluster::get_id(_cluster); 
+        return (uint32_t)(-1);
+    }
+
+    uint8_t  getFlags()     { 
+        if (_cluster)
+            return esp_matter::cluster::get_flags(_cluster);
+        return (uint8_t)(-1);
+    }
+
     bool     isClient()     { return (getFlags()  & esp_matter::CLUSTER_FLAG_CLIENT) != 0; }
     bool     isServer()     { return (getFlags()  & esp_matter::CLUSTER_FLAG_SERVER) != 0; }
 

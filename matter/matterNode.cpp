@@ -26,7 +26,7 @@ static const char *MATTER_NODE_TAG = "MatterNode";
 
 // Init static members:
 MatterNode::NodeMap_t MatterNode::_handlersMap = {};
-
+EventLoop* MatterNode::_eventLoop = new EventLoop("MatterEventLoop");
 
 // Static 
 esp_err_t MatterNode::identification_cb(esp_matter::identification::callback_type_t type, uint16_t endpoint_id, uint8_t effect_id,
@@ -48,9 +48,10 @@ esp_err_t MatterNode::attribute_update_cb(esp_matter::attribute::callback_type_t
             if (_handlersMap[endpointId][clusterId].contains(attributeId)) {
                 // Call all the registered callback Id
                 for (auto & cb : _handlersMap[endpointId][clusterId][attributeId]) {
-                    //cb(event, attrId, value);
-                    //ZbNode::_eventLoop->enqueue(std::bind(std::ref(cb), event, std::move(attrs)));
-                    ESP_LOGI(MATTER_NODE_TAG, "Ok");
+
+                    _eventLoop->enqueue(std::bind(std::ref(cb), type, std::move(val), std::move(priv_data)));
+                    ESP_LOGD(MATTER_NODE_TAG, "Cluster %d - attribute %d event posted",  clusterId, attributeId);
+
                 }      
             }
         }

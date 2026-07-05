@@ -66,8 +66,11 @@ class MatterAttribute;  // forward declaration
 // Singleton class to manage matter node
 class MatterNode
 {
+public:
+    using attributeEvent_t = esp_matter::attribute::callback_type_t;
+private:
     /// @brief attribute update callback type
-    using attrUpdateCallback_t = std::function<void(esp_matter::attribute::callback_type_t,  // PRE or POST_UPDATE
+    using attrUpdateCallback_t = std::function<void(attributeEvent_t,  // PRE or POST_UPDATE
                             esp_matter_attr_val_t*,                     // value
                             void*)>;               // priv_data
 
@@ -81,9 +84,7 @@ class MatterNode
     esp_matter::node_t* _node = nullptr;
     std::unordered_map<uint16_t,MatterEndpoint*> _endpointsMap;
 
-public:
     static EventLoop*  _eventLoop;
-
 
 
 public:  
@@ -121,8 +122,8 @@ public:
     MatterEndpoint* getEndpoint(uint16_t endpointId);
 
     /// @brief register attribute update handler for this attribute.
-    /// Update handler shall be type clusterCallback_t : 
-    /// void(eventType, uint16_t attrId, void* value) 
+    /// Update handler shall be type attrUpdateCallback_t : 
+    /// void(esp_matter::attribute::callback_type_t, esp_matter_attr_val_t*,void*) 
     /// @param func pointer to the method ex: &Main::clusterHandler
     /// @param instance instance of the object for this handler (ex: this)
     template<typename C, typename... Args>
@@ -140,10 +141,6 @@ public:
         _attrUpdateHandlers.push_back([instance, func](Args&&... args) {
             (instance->*func)(std::forward<Args>(args)...);
         });*/
-    }
-
-    void postEvent(EventLoop::callable_t&& callable){
-        _eventLoop->enqueue(std::move(callable));
     }
 
 protected:
