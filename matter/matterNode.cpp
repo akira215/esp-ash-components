@@ -6,6 +6,7 @@
 */
 
 #include "matterNode.h"
+#include "esp_log_level.h"
 
 #define LOG_LOCAL_LEVEL ESP_LOG_VERBOSE
 
@@ -23,7 +24,11 @@
 
 static const char *MATTER_NODE_TAG = "MatterNode";
 
-// Static
+// Init static members:
+MatterNode::NodeMap_t MatterNode::_handlersMap = {};
+
+
+// Static 
 esp_err_t MatterNode::identification_cb(esp_matter::identification::callback_type_t type, uint16_t endpoint_id, uint8_t effect_id,
                                        uint8_t effect_variant, void *priv_data)
 {
@@ -32,11 +37,25 @@ esp_err_t MatterNode::identification_cb(esp_matter::identification::callback_typ
 }
 
 // Static
-esp_err_t MatterNode::attribute_update_cb(esp_matter::attribute::callback_type_t type, uint16_t endpoint_id, uint32_t cluster_id,
-                                         uint32_t attribute_id, esp_matter_attr_val_t *val, void *priv_data)
+esp_err_t MatterNode::attribute_update_cb(esp_matter::attribute::callback_type_t type, 
+                                            uint16_t endpointId, uint32_t clusterId,
+                                            uint32_t attributeId, esp_matter_attr_val_t *val, void *priv_data)
 {
     esp_err_t err = ESP_OK;
-
+    
+    if (_handlersMap.contains(endpointId)) {
+        if (_handlersMap[endpointId].contains(clusterId)) {
+            if (_handlersMap[endpointId][clusterId].contains(attributeId)) {
+                // Call all the registered callback Id
+                for (auto & cb : _handlersMap[endpointId][clusterId][attributeId]) {
+                    //cb(event, attrId, value);
+                    //ZbNode::_eventLoop->enqueue(std::bind(std::ref(cb), event, std::move(attrs)));
+                    ESP_LOGI(MATTER_NODE_TAG, "Ok");
+                }      
+            }
+        }
+    }
+    
     return err;
 }
 
@@ -142,19 +161,7 @@ MatterNode::~MatterNode()
 {
     //TODO del all mEndPoint objects
 }
-/*
-template <typename T>
-MatterEndpoint* MatterNode::createEnpoint(T& config)
-{
-    MatterEndpoint* endpoint = new MatterEndpoint(this);
 
-    setConfig(_node, config);
-
-    _endpoints.push_back(endpoint);
-
-    return endpoint;
-}
-    */
 
 void MatterNode::start()
 {
@@ -187,6 +194,16 @@ void MatterNode::start()
     esp_matter::console::init();
 #endif
 }
+
+MatterEndpoint* MatterNode::getEndpoint(uint16_t endpointId)
+{
+    if (_endpointsMap.contains(endpointId)) {
+        return _endpointsMap[endpointId];
+    }
+
+    return nullptr;
+}
+
 
 
 

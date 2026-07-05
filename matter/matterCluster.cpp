@@ -17,13 +17,12 @@ MatterCluster::MatterCluster(MatterEndpoint* enpoint, esp_matter::cluster_t* clu
     esp_matter::attribute_t *attribute = esp_matter::attribute::get_first(cluster);
     while (attribute) {
 
-      MatterAttribute* matter_attribute = new MatterAttribute(this, attribute);
+        MatterAttribute* matter_attribute = new MatterAttribute(this, attribute);
 
-      _attributesMap[esp_matter::attribute::get_id(attribute)] = matter_attribute;
-      ESP_LOGD(TAG, "Added attribute with ID %d to cluster %d", matter_attribute->getAttributeId(), getClusterId());
+        _attributesMap[esp_matter::attribute::get_id(attribute)] = matter_attribute;
+        ESP_LOGD(TAG, "Added attribute with ID %d to cluster %d", matter_attribute->getAttributeId(), getClusterId());
         
-        
-      attribute = esp_matter::attribute::get_next(attribute);
+        attribute = esp_matter::attribute::get_next(attribute);
     }
 
 }
@@ -31,4 +30,14 @@ MatterCluster::MatterCluster(MatterEndpoint* enpoint, esp_matter::cluster_t* clu
 MatterCluster::~MatterCluster()
 {
     // TODO remove attribute and endpoints
+}
+
+
+MatterAttribute* MatterCluster::getAttribute(uint32_t attributeId)
+{
+    if (_attributesMap.contains(attributeId)) {
+        return _attributesMap[attributeId];
+    }
+    
+    return nullptr;
 }

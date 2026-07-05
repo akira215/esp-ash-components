@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <esp_matter.h>
 #include <esp_err.h>
 
@@ -15,7 +16,11 @@
 //#include "freertos/task.h" // for task handle
 
 #include "matterEndpoint.h"
+#include <unordered_map>
 #include <vector>
+
+
+#include "eventLoop.h"
 
 
 #if CHIP_DEVICE_CONFIG_ENABLE_THREAD
@@ -56,15 +61,32 @@
 #define CHIP_DEVICE_CONFIG_DEFAULT_NODE_LABEL "Akira Node"
 */
 
+class MatterAttribute;  // forward declaration
 
 // Singleton class to manage matter node
 class MatterNode
 {
+    /// @brief attribute update callback type
+    using attrUpdateCallback_t = std::function<void(esp_matter::attribute::callback_type_t,  // PRE or POST_UPDATE
+                            esp_matter_attr_val_t*,                     // value
+                            void*)>;               // priv_data
+
+    // Type aliases to make the code highly readable
+    using ClusterMap_t   = std::unordered_map<uint32_t, std::vector<attrUpdateCallback_t>>;   // AttributID -> 
+    using EndpointMap_t   = std::unordered_map<uint32_t, ClusterMap_t>;     // ClusterID -> 
+    using NodeMap_t       = std::unordered_map<uint16_t, EndpointMap_t>;    // EndpointID Base Node Database
+
+    static NodeMap_t _handlersMap;  // This maps contains all the registered handlers for all attributes
+
     esp_matter::node_t* _node = nullptr;
-    std::vector<MatterEndpoint*> _endpoints;
+    std::unordered_map<uint16_t,MatterEndpoint*> _endpointsMap;
 
 public:
-  
+    static EventLoop*  _eventLoop;
+
+
+
+public:  
     ~MatterNode();
 
     //Singletons should not be cloneable.
@@ -79,13 +101,16 @@ public:
     // TODEL
     esp_matter::node_t* getEspNode() { return _node; };
 
-    // Create an Endpoint
+    // Create an Endpoint type should be for example extended_color_light::config_t
     template <typename T>
     MatterEndpoint* createEndpoint(T& config){
         MatterEndpoint* endpoint = new MatterEndpoint(this);
-
-        endpoint->create_endpoint(_node, &config);
-        _endpoints.push_back(endpoint);
+        
+        if(endpoint)
+        {
+            endpoint->create_endpoint(_node, &config);
+            _endpointsMap[endpoint->getEndpointId()] = endpoint;
+        }
 
         return endpoint;
     }
@@ -93,17 +118,45 @@ public:
 
     void start();
 
+    MatterEndpoint* getEndpoint(uint16_t endpointId);
 
-private:
-    /// @brief Constructor is private (singleton)
+    /// @brief register attribute update handler for this attribute.
+    /// Update handler shall be type clusterCallback_t : 
+    /// void(eventType, uint16_t attrId, void* value) 
+    /// @param func pointer to the method ex: &Main::clusterHandler
+    /// @param instance instance of the object for this handler (ex: this)
+    template<typename C, typename... Args>
+    void registerAttrUpdateHandler(void (C::* func)(Args...), 
+                                    C* instance, 
+                                    uint16_t endpointId,
+                                    uint32_t clusterId,
+                                    uint32_t attrId) {
+        // A lambda captures the function pointer and instance, 
+        // and forwards any number of incoming arguments using a parameter pack.
+            _handlersMap[endpointId][clusterId][attrId].push_back([instance, func](Args&&... args) {
+            (instance->*func)(std::forward<Args>(args)...);
+        });
+        /*
+        _attrUpdateHandlers.push_back([instance, func](Args&&... args) {
+            (instance->*func)(std::forward<Args>(args)...);
+        });*/
+    }
+
+    void postEvent(EventLoop::callable_t&& callable){
+        _eventLoop->enqueue(std::move(callable));
+    }
+
+protected:
+    /// @brief Constructor is protected (singleton) 
     MatterNode();
  
+private:
     // This callback is called for every attribute update. The callback implementation shall
     // handle the desired attributes and return an appropriate error code. If the attribute
     // is not of your interest, please do not return an error code and strictly return ESP_OK.
     // priv_data is set in the esp_matter::node::config_t if required 
-    static esp_err_t attribute_update_cb(esp_matter::attribute::callback_type_t type, uint16_t endpoint_id, 
-                                            uint32_t cluster_id, uint32_t attribute_id, 
+    static esp_err_t attribute_update_cb(esp_matter::attribute::callback_type_t type, uint16_t endpointId, 
+                                            uint32_t clusterId, uint32_t attributeId, 
                                             esp_matter_attr_val_t *val, void *priv_data);
     
     // This callback is invoked when clients interact with the Identify Cluster.

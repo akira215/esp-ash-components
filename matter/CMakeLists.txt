@@ -13,5 +13,5 @@ set(SOURCES matterNode.cpp
 idf_component_register(SRCS ${SOURCES}
                     INCLUDE_DIRS include
                     PRIV_INCLUDE_DIRS "../utils"
-                    REQUIRES nvs_flash esp_matter)
+                    REQUIRES nvs_flash esp_matter eventLoop)
 #driver is required for zigbee stack

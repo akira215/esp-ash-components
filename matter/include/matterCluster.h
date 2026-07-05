@@ -10,7 +10,11 @@
 
 #include <esp_matter_endpoint.h>
 #include <matterAttribute.h>
-#include <map>
+#include <unordered_map>
+
+
+#define CLUSTER_ID(ClusterName) ::chip::app::Clusters::ClusterName::Id
+
 
 class MatterEndpoint;
 
@@ -20,7 +24,41 @@ class MatterCluster
 {
     MatterEndpoint*                     _endpoint = nullptr;
     esp_matter::cluster_t*              _cluster = nullptr;
-    std::map<uint32_t,MatterAttribute*> _attributesMap;
+    std::unordered_map<uint32_t,MatterAttribute*> _attributesMap;
+
+    // from esp_matter_data_model.cpp
+    struct command_t {
+        uint32_t command_id;
+        uint16_t flags;
+        esp_matter::command::callback_t callback;
+        esp_matter::command::callback_t user_callback;
+        struct _command *next;
+    };
+
+    struct event_t {
+        uint32_t event_id;
+        struct _event *next;
+    };
+
+    struct cluster_t {
+        uint32_t cluster_id;
+        uint16_t endpoint_id;
+        uint8_t flags;
+        const esp_matter::cluster::function_generic_t *functions;
+        esp_matter::cluster::plugin_server_init_callback_t plugin_server_init_callback;
+        esp_matter::cluster::delegate_init_callback_t delegate_init_callback;
+        void *delegate_pointer;
+        esp_matter::cluster::add_bounds_callback_t add_bounds_callback;
+        esp_matter::cluster::initialization_callback_t init_callback;
+        esp_matter::cluster::shutdown_callback_t shutdown_callback;
+        chip::DataVersion data_version;
+        _attribute_base_t *attribute_list; /* If attribute is managed internally, the actual pointer type is
+                                        _internal_attribute_t. When operating attribute_list, do check the flags first! */
+        command_t *command_list;
+        event_t *event_list;
+        struct _cluster *next;
+    };
+
 public:
 
     /// @brief Constructor create the end point
@@ -38,8 +76,7 @@ public:
     // 0x08 CLUSTER_FLAG_GEN_CLUSTER - 
     // 0x10 CLUSTER_FLAG_SHUTDOWN_FUNCTION
     // 
-    // bool is_server = (flags & esp_matter::CLUSTER_FLAG_SERVER);
-    // bool is_client = (flags & esp_matter::CLUSTER_FLAG_CLIENT);
+    MatterAttribute* getAttribute(uint32_t attributeId);
     
 };
 

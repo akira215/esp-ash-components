@@ -12,8 +12,14 @@
 #include <esp_log.h>
 #include "../utils/common_macros.h"
 
+#include <app/clusters/identify-server/identify-server.h> // For Identify struct
+
 #include "matterCluster.h"
-#include <vector>
+#include <unordered_map>
+
+
+// From esp_matter_data_model.cpp
+#define MATTER_MAX_SEMANTIC_TAG_COUNT 3
 
 class MatterNode;
 
@@ -25,9 +31,30 @@ class MatterEndpoint
     esp_matter::endpoint_t*         _endpoint = nullptr;
     MatterNode*                     _node = nullptr;
 
-    std::vector<MatterCluster*>     _vClusters;
+    std::unordered_map<uint32_t,MatterCluster*> _clustersMap;
 
-        
+    // From esp_matter_data_model.cpp
+    struct deviceType_t {
+        uint8_t version;
+        uint32_t id;
+    };
+
+    struct endpoint_t {
+        uint16_t endpoint_id;
+        bool enabled;
+        uint8_t device_type_count;
+        deviceType_t device_types[CONFIG_ESP_MATTER_MAX_DEVICE_TYPE_COUNT];
+        uint16_t flags;
+        uint16_t parent_endpoint_id;
+        void *priv_data;
+        Identify *identify;
+        chip::app::DataModel::EndpointCompositionPattern composition_pattern;
+        uint8_t semantic_tag_count;
+        chip::app::DataModel::Provider::SemanticTag semantic_tags[MATTER_MAX_SEMANTIC_TAG_COUNT];
+        void* cluster_list;
+        struct _endpoint *next;
+    };
+
     // A generic helper tag to pass the type context
     template <typename T> struct type_holder {};
 
@@ -65,7 +92,8 @@ public:
     esp_matter::endpoint_t* getEspEndpoint() { return _endpoint; }
     uint16_t getEndpointId() { return esp_matter::endpoint::get_id(_endpoint); } 
 
+    // If flags = esp_matter::CLUSTER_FLAG_NONE, the first cluster is returned
+    MatterCluster* getCluster(uint32_t clusterId);
 
 
 };
-

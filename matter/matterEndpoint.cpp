@@ -28,7 +28,8 @@ void MatterEndpoint::populate_cluster_map()
 
         MatterCluster* matter_cluster = new MatterCluster(this, cluster);
 
-        _vClusters.push_back(matter_cluster);
+        _clustersMap[matter_cluster->getClusterId()] = matter_cluster;
+
         ESP_LOGD(TAG, "Added cluster with ID %u to endpoint %d", matter_cluster->getClusterId(), getEndpointId());
         
         // Move to the next cluster structure
@@ -36,3 +37,10 @@ void MatterEndpoint::populate_cluster_map()
     }
 }
 
+MatterCluster* MatterEndpoint::getCluster(uint32_t clusterId)
+{
+    if (_clustersMap.contains(clusterId)) {
+        return _clustersMap[clusterId];
+    }
+    return nullptr;
+}
