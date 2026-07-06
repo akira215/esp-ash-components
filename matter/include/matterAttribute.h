@@ -11,11 +11,16 @@
 #include <esp_matter_endpoint.h>
 #include <functional>
 #include <vector>
+#include <string>
+
+#include "matterValue.h"
 
 
 #define ATTRIBUTE_ID(ClusterName, AttributeName) ::chip::app::Clusters::ClusterName::Attributes::AttributeName::Id
 
 class MatterCluster;
+
+
 
 /// @brief Matter Cluster class
 /// store maps of cluster and cluster list as per SDK requirements
@@ -23,7 +28,9 @@ class MatterAttribute
 {
     MatterCluster*              _cluster = nullptr;
     esp_matter::attribute_t*    _attribute = nullptr;
-
+    uint16_t _endpointId = (uint16_t)(-1);
+    uint32_t _clusterId = (uint32_t)(-1);
+    uint32_t _attributeId = (uint32_t)(-1);
     
     // This comes from esp_matter_data_model.cpp
     struct _attrBase_t {
@@ -40,7 +47,6 @@ class MatterAttribute
         uint32_t cluster_id;
         esp_matter::attribute::callback_t override_callback;
     };
-
 
 public:
 
@@ -76,9 +82,29 @@ public:
     /// @param instance instance of the object for this handler (ex: this)
     template<typename C, typename... Args>
     void registerAttrUpdateHandler(void (C::* func)(Args...), C* instance);
+
+
+    /// @brief Method to update an attribute whatever the type is 
+    template <typename T>
+    inline void updateValue(T raw_value) {
+        // Automatically deduces T and constructs the perfect struct layout
+        MatterValue matter_value;
+        matter_value = raw_value;
+        //esp_matter_attr_val_t matter_value = make_matter_val(raw_value);
+        
+        // Pass it straight to the native SDK
+        esp_err_t ret;
+        ret = esp_matter::attribute::update(_endpointId, _clusterId, _attributeId, &matter_value);
+        if(ret != ESP_OK)  
+            ESP_LOGE("MatterAttribute","updateValue - esp_matter::attribute::update failed with error code %d", ret); 
+
+    }
+
+    MatterValue getValue();
         
 
 };
+
 
 // Include the implementation at the very bottom
 #include "matterAttribute_impl.tpp" 

@@ -49,8 +49,8 @@ esp_err_t MatterNode::attribute_update_cb(esp_matter::attribute::callback_type_t
                 // Call all the registered callback Id
                 for (auto & cb : _handlersMap[endpointId][clusterId][attributeId]) {
 
-                    _eventLoop->enqueue(std::bind(std::ref(cb), type, std::move(val), std::move(priv_data)));
-                    ESP_LOGD(MATTER_NODE_TAG, "Cluster %d - attribute %d event posted",  clusterId, attributeId);
+                    _eventLoop->enqueue(std::bind(std::ref(cb), type, std::move(static_cast<MatterValue*>(val)), std::move(priv_data)));
+                    ESP_LOGD(MATTER_NODE_TAG, "Cluster %d - attribute %d - type %u : event posted,",  clusterId, attributeId, (*val).type);
 
                 }      
             }

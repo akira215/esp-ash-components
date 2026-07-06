@@ -54,7 +54,7 @@ class MatterCluster
         esp_matter::cluster::shutdown_callback_t shutdown_callback;
         chip::DataVersion data_version;
         void *attribute_list; /* If attribute is managed internally, the actual pointer type is
-                                        _internal_attribute_t. When operating attribute_list, do check the flags first! */
+                                _internal_attribute_t. When operating attribute_list, do check the flags first! */
         command_t *command_list;
         event_t *event_list;
         struct _cluster *next;

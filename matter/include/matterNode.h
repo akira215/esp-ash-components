@@ -15,6 +15,8 @@
 //#include "freertos/FreeRTOS.h"
 //#include "freertos/task.h" // for task handle
 
+#include "matterValue.h"
+
 #include "matterEndpoint.h"
 #include <unordered_map>
 #include <vector>
@@ -61,7 +63,7 @@
 #define CHIP_DEVICE_CONFIG_DEFAULT_NODE_LABEL "Akira Node"
 */
 
-class MatterAttribute;  // forward declaration
+//class MatterAttribute;  // forward declaration
 
 // Singleton class to manage matter node
 class MatterNode
@@ -71,8 +73,8 @@ public:
 private:
     /// @brief attribute update callback type
     using attrUpdateCallback_t = std::function<void(attributeEvent_t,  // PRE or POST_UPDATE
-                            esp_matter_attr_val_t*,                     // value
-                            void*)>;               // priv_data
+                                    MatterValue*,                     // value
+                                    void*)>;                        // priv_data
 
     // Type aliases to make the code highly readable
     using ClusterMap_t   = std::unordered_map<uint32_t, std::vector<attrUpdateCallback_t>>;   // AttributID -> 
