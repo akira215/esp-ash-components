@@ -53,8 +53,14 @@ esp_err_t MatterNode::attribute_update_cb(esp_matter::attribute::callback_type_t
                     ESP_LOGD(MATTER_NODE_TAG, "Cluster %d - attribute %d - type %u : event posted,",  clusterId, attributeId, (*val).type);
 
                 }      
+            } else {
+                err = ESP_ERR_NOT_FOUND;
             }
+        } else {
+            err = ESP_ERR_NOT_FOUND;
         }
+    } else {
+        err = ESP_ERR_NOT_FOUND;
     }
     
     return err;

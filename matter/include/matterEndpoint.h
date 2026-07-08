@@ -19,6 +19,9 @@
 #include <unordered_map>
 
 
+
+#define ENDPOINT_CONFIG(DeviceType) ::esp_matter::endpoint::DeviceType::config_t
+
 // From esp_matter_data_model.cpp
 #define MATTER_MAX_SEMANTIC_TAG_COUNT 3
 
