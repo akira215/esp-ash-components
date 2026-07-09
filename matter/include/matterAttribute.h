@@ -20,8 +20,6 @@
 
 class MatterCluster;
 
-
-
 /// @brief Matter Cluster class
 /// store maps of cluster and cluster list as per SDK requirements
 class MatterAttribute

@@ -11,13 +11,18 @@
 #include <esp_matter_endpoint.h>
 
 #include <unordered_map>
+#include "matterValue.h"
 
 
 #define CLUSTER_ID(ClusterName) ::chip::app::Clusters::ClusterName::Id
 
 
+#define ADD_MATTER_FEATURE(cluster_ptr, cluster_name, feature_name) \
+    esp_matter::cluster::cluster_name::feature::feature_name::add(cluster_ptr)
+
 class MatterEndpoint;
 class MatterAttribute;
+
 
 /// @brief Matter Cluster class
 /// store maps of cluster and cluster list as per SDK requirements
@@ -93,6 +98,11 @@ public:
     // 0x10 CLUSTER_FLAG_SHUTDOWN_FUNCTION
     // 
     MatterAttribute* getAttribute(uint32_t attributeId);
+
+    void addFeature();
+    MatterAttribute* addAttribute(uint32_t attributeId, 
+                            uint8_t flags = esp_matter::ATTRIBUTE_FLAG_NONE, 
+                            MatterValue value = MatterValue());
     
 };
 

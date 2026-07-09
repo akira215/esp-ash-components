@@ -67,6 +67,7 @@ public:
         return T{};
     }
 
+
     // 2. Conversion to bool
     operator bool() const {
         if ((this->type == ESP_MATTER_VAL_TYPE_BOOLEAN) || 

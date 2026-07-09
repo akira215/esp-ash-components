@@ -54,13 +54,13 @@ esp_err_t MatterNode::attribute_update_cb(esp_matter::attribute::callback_type_t
 
                 }      
             } else {
-                err = ESP_ERR_NOT_FOUND;
+                //err = ESP_ERR_NOT_FOUND;
             }
         } else {
-            err = ESP_ERR_NOT_FOUND;
+            //err = ESP_ERR_NOT_FOUND;
         }
     } else {
-        err = ESP_ERR_NOT_FOUND;
+        //err = ESP_ERR_NOT_FOUND;
     }
     
     return err;
