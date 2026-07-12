@@ -12,13 +12,15 @@
 
 #include <unordered_map>
 #include "matterValue.h"
+#include "esp_matter_feature.h"
 
 
 #define CLUSTER_ID(ClusterName) ::chip::app::Clusters::ClusterName::Id
 
-
-#define ADD_MATTER_FEATURE(cluster_ptr, cluster_name, feature_name) \
-    esp_matter::cluster::cluster_name::feature::feature_name::add(cluster_ptr)
+// cluster and feature are in the file esp_matter_feature.h
+// WARNING clusterName is not the same as the cluster name for endpoint
+#define FEATURE_CONFIG(clusterName, featureName) \
+    esp_matter::cluster::clusterName::feature::featureName::config_t
 
 class MatterEndpoint;
 class MatterAttribute;
@@ -29,9 +31,9 @@ class MatterAttribute;
 class MatterCluster
 {
     MatterEndpoint*                     _endpoint = nullptr;
-    esp_matter::cluster_t*              _cluster = nullptr;
+   
     std::unordered_map<uint32_t,MatterAttribute*> _attributesMap;
-
+/*
     // from esp_matter_data_model.cpp
     struct command_t {
         uint32_t command_id;
@@ -58,19 +60,39 @@ class MatterCluster
         esp_matter::cluster::initialization_callback_t init_callback;
         esp_matter::cluster::shutdown_callback_t shutdown_callback;
         chip::DataVersion data_version;
-        void *attribute_list; /* If attribute is managed internally, the actual pointer type is
-                                _internal_attribute_t. When operating attribute_list, do check the flags first! */
+        void *attribute_list; // If attribute is managed internally, the actual pointer type is
+                              //  _internal_attribute_t. When operating attribute_list, do check the flags first! 
         command_t *command_list;
         event_t *event_list;
         struct _cluster *next;
     };
+    */
 
+     // A generic helper tag to pass the type context
+    template <typename T> struct type_holder {};
+
+    // Universal ADL bridge to add feature based on config type
+    template <typename ConfigType>
+    auto call_add(ConfigType *config, type_holder<ConfigType>) {
+        // This allows ADL to automatically resolve down to the matching child namespace!
+        using namespace esp_matter::cluster;
+        // Unqualified call allows the compiler to find the 'add' that matches your ConfigType
+        return add(_cluster, config);
+    }
+
+
+protected:
+    esp_matter::cluster_t*              _cluster = nullptr;
 public:
 
-    /// @brief Constructor create the end point
+    /// @brief Constructor create the cluster
     MatterCluster(MatterEndpoint* enpoint, esp_matter::cluster_t* cluster);
     ~MatterCluster();
 
+    /// @brief access esp_matter pointer directly
+    operator esp_matter::cluster_t* () const {
+        return _cluster;
+    }
 
     MatterEndpoint* getEndpoint() {
         return _endpoint;
@@ -99,7 +121,19 @@ public:
     // 
     MatterAttribute* getAttribute(uint32_t attributeId);
 
-    void addFeature();
+    template <typename ConfigType>
+    void addFeature(ConfigType *config) 
+    {
+        esp_err_t err  = call_add( config, type_holder<ConfigType>{});
+        if(err != ESP_OK)
+            ESP_LOGE("MatterCluster", "Failed to add feature");
+        
+        // Populate the attribute map 
+        refreshAttributes(); 
+    }
+
+    void refreshAttributes();
+    
     MatterAttribute* addAttribute(uint32_t attributeId, 
                             uint8_t flags = esp_matter::ATTRIBUTE_FLAG_NONE, 
                             MatterValue value = MatterValue());

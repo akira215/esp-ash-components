@@ -15,22 +15,15 @@ static const char *TAG = "MatterCluster";
 MatterCluster::MatterCluster(MatterEndpoint* enpoint, esp_matter::cluster_t* cluster) :
                             _endpoint(enpoint), _cluster(cluster)
 {
-    esp_matter::attribute_t *attribute = esp_matter::attribute::get_first(cluster);
-    while (attribute) {
-
-        MatterAttribute* matter_attribute = new MatterAttribute(this, attribute);
-
-        _attributesMap[esp_matter::attribute::get_id(attribute)] = matter_attribute;
-        ESP_LOGD(TAG, "Added attribute with ID %d to cluster %d", matter_attribute->getAttributeId(), getClusterId());
-        
-        attribute = esp_matter::attribute::get_next(attribute);
-    }
-
+  refreshAttributes();
 }
 
 MatterCluster::~MatterCluster()
 {
-    // TODO remove attribute and endpoints
+    for (auto &item : _attributesMap) {
+        delete item.second;
+    }
+    _attributesMap.clear();
 }
 
 
@@ -43,24 +36,19 @@ MatterAttribute* MatterCluster::getAttribute(uint32_t attributeId)
     return nullptr;
 }
 
-void MatterCluster::addFeature()
+void MatterCluster::refreshAttributes()
 {
-    /*
-    esp_matter::cluster::color_control::feature::hue_saturation::add(color_control_cluster);
-    
-    if (esp_matter::cluster::add_feature(color_control_cluster, hs_feature_flags) == ESP_OK) {
-        ESP_LOGI(TAG, "Successfully added Hue/Saturation feature to Extended Color Light!");
-    } else {
-        ESP_LOGE(TAG, "Failed to add Hue/Saturation feature.");
+    esp_matter::attribute_t *attribute = esp_matter::attribute::get_first(_cluster);
+    while (attribute) {
+        if (!_attributesMap.contains(esp_matter::attribute::get_id(attribute))) {
+            MatterAttribute* matter_attribute = new MatterAttribute(this, attribute);
+            _attributesMap[esp_matter::attribute::get_id(attribute)] = matter_attribute;
+            ESP_LOGD(TAG, "Added attribute with ID %d in cluster %d", matter_attribute->getAttributeId(), getClusterId());
+        }
+        attribute = esp_matter::attribute::get_next(attribute);
     }
-
-    if (_attributesMap.contains(attributeId)) {
-        return _attributesMap[attributeId];
-    }
-    ESP_LOGW(TAG, "getAttribute - No attribute with ID %d to cluster %d, return nullptr", attributeId, getClusterId());
-    return nullptr;
-    */
 }
+
 
 MatterAttribute* MatterCluster::addAttribute(uint32_t attributeId, uint8_t flags, MatterValue value)
  {
