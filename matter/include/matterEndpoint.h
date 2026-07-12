@@ -22,6 +22,8 @@
 
 #define ENDPOINT_CONFIG(DeviceType) ::esp_matter::endpoint::DeviceType::config_t
 
+
+
 // From esp_matter_data_model.cpp
 #define MATTER_MAX_SEMANTIC_TAG_COUNT 3
 
@@ -32,11 +34,11 @@ class MatterNode;
 /// store maps of cluster and cluster list as per SDK requirements
 class MatterEndpoint
 {
-    esp_matter::endpoint_t*         _endpoint = nullptr;
-    MatterNode*                     _node = nullptr;
+    esp_matter::endpoint_t* _endpoint = nullptr;
+    MatterNode*             _node     = nullptr;
 
     std::unordered_map<uint32_t,MatterCluster*> _clustersMap;
-
+/*
     // From esp_matter_data_model.cpp
     struct deviceType_t {
         uint8_t version;
@@ -58,7 +60,7 @@ class MatterEndpoint
         void* cluster_list;
         struct _endpoint *next;
     };
-
+*/
     // A generic helper tag to pass the type context
     template <typename T> struct type_holder {};
 
@@ -75,7 +77,7 @@ class MatterEndpoint
     void populate_cluster_map();
 
 public:
-
+  
     /// @brief Constructor create the end point
     MatterEndpoint(MatterNode* node);
     ~MatterEndpoint();

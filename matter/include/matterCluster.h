@@ -20,7 +20,9 @@
 // cluster and feature are in the file esp_matter_feature.h
 // WARNING clusterName is not the same as the cluster name for endpoint
 #define FEATURE_CONFIG(clusterName, featureName) \
-    esp_matter::cluster::clusterName::feature::featureName::config_t
+    ::esp_matter::cluster::clusterName::feature::featureName::config_t
+
+#define chip_cluster ::chip::app::Clusters
 
 class MatterEndpoint;
 class MatterAttribute;
@@ -81,7 +83,6 @@ class MatterCluster
     }
 
 
-protected:
     esp_matter::cluster_t*              _cluster = nullptr;
 public:
 

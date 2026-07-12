@@ -11,7 +11,7 @@ set(SOURCES matterNode.cpp
             matterAttribute.cpp)
             
 idf_component_register(SRCS ${SOURCES}
-                    INCLUDE_DIRS include include/clusters
+                    INCLUDE_DIRS include
                     PRIV_INCLUDE_DIRS "../utils"
                     REQUIRES nvs_flash esp_matter eventLoop)
 

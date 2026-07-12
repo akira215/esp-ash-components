@@ -12,8 +12,6 @@
 #include <esp_err.h>
 
 #include "esp_matter_attribute_utils.h"
-//#include "freertos/FreeRTOS.h"
-//#include "freertos/task.h" // for task handle
 
 #include "matterValue.h"
 
@@ -63,7 +61,6 @@
 #define CHIP_DEVICE_CONFIG_DEFAULT_NODE_LABEL "Akira Node"
 */
 
-//class MatterAttribute;  // forward declaration
 
 // Singleton class to manage matter node
 class MatterNode
@@ -71,22 +68,24 @@ class MatterNode
 public:
     using attributeEvent_t = esp_matter::attribute::callback_type_t;
 private:
+    /// @brief Constructor is protected (singleton) 
+    MatterNode();
+
     /// @brief attribute update callback type
     using attrUpdateCallback_t = std::function<void(attributeEvent_t,  // PRE or POST_UPDATE
                                     MatterValue*,                     // value
                                     void*)>;                        // priv_data
 
     // Type aliases to make the code highly readable
-    using ClusterMap_t   = std::unordered_map<uint32_t, std::vector<attrUpdateCallback_t>>;   // AttributID -> 
+    using ClusterMap_t    = std::unordered_map<uint32_t, std::vector<attrUpdateCallback_t>>;   // AttributID -> 
     using EndpointMap_t   = std::unordered_map<uint32_t, ClusterMap_t>;     // ClusterID -> 
     using NodeMap_t       = std::unordered_map<uint16_t, EndpointMap_t>;    // EndpointID Base Node Database
 
-    static NodeMap_t _handlersMap;  // This maps contains all the registered handlers for all attributes
-
-    esp_matter::node_t* _node = nullptr;
-    std::unordered_map<uint16_t,MatterEndpoint*> _endpointsMap;
-
+    static NodeMap_t   _handlersMap;  // This maps contains all the registered handlers for all attributes
     static EventLoop*  _eventLoop;
+
+    esp_matter::node_t*                             _node = nullptr;
+    std::unordered_map<uint16_t,MatterEndpoint*>    _endpointsMap;
 
 
 public:  
@@ -118,10 +117,13 @@ public:
         return endpoint;
     }
         
-
+    void factoryReset();
+    
     void start();
 
     MatterEndpoint* getEndpoint(uint16_t endpointId);
+
+    
 
     /// @brief register attribute update handler for this attribute.
     /// Update handler shall be type attrUpdateCallback_t : 
@@ -139,15 +141,8 @@ public:
             _handlersMap[endpointId][clusterId][attrId].push_back([instance, func](Args&&... args) {
             (instance->*func)(std::forward<Args>(args)...);
         });
-        /*
-        _attrUpdateHandlers.push_back([instance, func](Args&&... args) {
-            (instance->*func)(std::forward<Args>(args)...);
-        });*/
     }
 
-protected:
-    /// @brief Constructor is protected (singleton) 
-    MatterNode();
  
 private:
     // This callback is called for every attribute update. The callback implementation shall

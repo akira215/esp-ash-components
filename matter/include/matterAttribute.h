@@ -29,7 +29,7 @@ class MatterAttribute
     uint16_t _endpointId = (uint16_t)(-1);
     uint32_t _clusterId = (uint32_t)(-1);
     uint32_t _attributeId = (uint32_t)(-1);
-    
+  
     // This comes from esp_matter_data_model.cpp
     struct _attrBase_t {
         uint16_t flags; // This struct is for attributes managed internally.

@@ -17,7 +17,10 @@ MatterEndpoint::MatterEndpoint(MatterNode* node) : _node(node)
 
 MatterEndpoint::~MatterEndpoint()
 {
-    // TODO remove attribute and endpoints
+    for (auto &item : _clustersMap) {
+        delete item.second;
+    }
+    _clustersMap.clear();
 }
 
 void MatterEndpoint::populate_cluster_map()

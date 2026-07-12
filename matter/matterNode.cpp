@@ -10,15 +10,21 @@
 
 #define LOG_LOCAL_LEVEL ESP_LOG_VERBOSE
 
-#include <common_macros.h>
+
 #include <nvs_flash.h>
 #include <esp_log.h>
 
 #include <esp_matter_console.h>
 #include <esp_matter_ota.h>
+
 #if CHIP_DEVICE_CONFIG_ENABLE_THREAD
 #include <platform/ESP32/OpenthreadLauncher.h>
 #endif
+
+#include <app/server/CommissioningWindowManager.h>
+#include <app/server/Server.h>
+
+
 
 #include <string>
 
@@ -166,9 +172,17 @@ MatterNode::MatterNode()
 
 MatterNode::~MatterNode()
 {
-    //TODO del all mEndPoint objects
+    for (auto &item : _endpointsMap) {
+        delete item.second;
+    }
+    _endpointsMap.clear();
 }
 
+void MatterNode::factoryReset()
+{
+    ESP_LOGI(MATTER_NODE_TAG, "Performing Node factory reset .....");
+    esp_matter::factory_reset();
+}
 
 void MatterNode::start()
 {
