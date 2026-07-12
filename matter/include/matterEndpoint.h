@@ -105,5 +105,20 @@ public:
     // If flags = esp_matter::CLUSTER_FLAG_NONE, the first cluster is returned
     MatterCluster* getCluster(uint32_t clusterId);
 
+    /// @brief register identify .
+    /// Update handler shall be type identifyCallback_t : 
+    /// void(identifyEvent_t,uint8_t, uint8_t, void*)
+    /// @param func pointer to the method ex: &Main::clusterHandler
+    /// @param instance instance of the object for this handler (ex: this)
+    template<typename C, typename... Args>
+    void registerIdentifyHandler(void (C::* func)(Args...), 
+                                    C* instance );
+
 
 };
+
+// Include the implementation at the very bottom
+#include "matterEndpoint_impl.tpp" 
+
+
+

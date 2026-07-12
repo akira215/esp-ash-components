@@ -9,7 +9,7 @@
 
 #include "periodicTask.h"
 #include "cppgpio.h"
-#include "esp_event.h"
+
 
 static const uint64_t FAST_POLL     = 5;    // 5 ms
 static const uint64_t STANDARD_POLL = 10;   // 10 ms
@@ -42,6 +42,7 @@ public:
     esp_err_t setLongPressHandler(esp_event_handler_t handler, void *handler_arg = nullptr);
     esp_err_t clearShortPressHandler();
     esp_err_t clearLongPressHandler();
+
     bool canSleep();
 
 protected:

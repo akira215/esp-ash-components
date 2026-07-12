@@ -15,7 +15,6 @@
 
 #include "matterValue.h"
 
-#include "matterEndpoint.h"
 #include <unordered_map>
 #include <vector>
 
@@ -44,6 +43,14 @@
     }
 #endif
 
+#define ABORT_NODE_ON_FAILURE(x, ...) do {           \
+        if (!(unlikely(x))) {                       \
+            __VA_ARGS__;                            \
+            vTaskDelay(5000 / portTICK_PERIOD_MS);  \
+            abort();                                \
+        }                                           \
+    } while (0)
+
 /*
 #ifdef CHIP_DEVICE_CONFIG_DEVICE_VENDOR_NAME
     #undef CHIP_DEVICE_CONFIG_DEVICE_VENDOR_NAME
@@ -61,20 +68,30 @@
 #define CHIP_DEVICE_CONFIG_DEFAULT_NODE_LABEL "Akira Node"
 */
 
+// Forward declaration
+class MatterEndpoint;
+
 
 // Singleton class to manage matter node
 class MatterNode
 {
 public:
     using attributeEvent_t = esp_matter::attribute::callback_type_t;
-private:
-    /// @brief Constructor is protected (singleton) 
-    MatterNode();
-
+    using identifyEvent_t = esp_matter::identification::callback_type_t;
+    
     /// @brief attribute update callback type
     using attrUpdateCallback_t = std::function<void(attributeEvent_t,  // PRE or POST_UPDATE
                                     MatterValue*,                     // value
                                     void*)>;                        // priv_data
+    
+    using identifyCallback_t = std::function<void(identifyEvent_t,  // START, STOP, EFFECT,
+                                    uint8_t,                    // effectId
+                                    uint8_t,                     // effectVariant
+                                    void*)>;                    // priv_data
+
+private:
+    /// @brief Constructor is protected (singleton) 
+    MatterNode();
 
     // Type aliases to make the code highly readable
     using ClusterMap_t    = std::unordered_map<uint32_t, std::vector<attrUpdateCallback_t>>;   // AttributID -> 
@@ -84,9 +101,10 @@ private:
     static NodeMap_t   _handlersMap;  // This maps contains all the registered handlers for all attributes
     static EventLoop*  _eventLoop;
 
+    static std::unordered_map<uint16_t,identifyCallback_t>    _identifyMap;
+
     esp_matter::node_t*                             _node = nullptr;
     std::unordered_map<uint16_t,MatterEndpoint*>    _endpointsMap;
-
 
 public:  
     ~MatterNode();
@@ -105,17 +123,7 @@ public:
 
     // Create an Endpoint type should be for example extended_color_light::config_t
     template <typename T>
-    MatterEndpoint* createEndpoint(T& config){
-        MatterEndpoint* endpoint = new MatterEndpoint(this);
-        
-        if(endpoint)
-        {
-            endpoint->create_endpoint(_node, &config);
-            _endpointsMap[endpoint->getEndpointId()] = endpoint;
-        }
-
-        return endpoint;
-    }
+    MatterEndpoint* createEndpoint(T& config);
         
     void factoryReset();
     
@@ -143,6 +151,22 @@ public:
         });
     }
 
+    /// @brief register identify .
+    /// Update handler shall be type identifyCallback_t : 
+    /// void(identifyEvent_t,uint8_t, uint8_t, void*)
+    /// @param func pointer to the method ex: &Main::clusterHandler
+    /// @param instance instance of the object for this handler (ex: this)
+    template<typename C, typename... Args>
+    void registerIdentifyHandler(void (C::* func)(Args...), 
+                                    C* instance, 
+                                    uint16_t endpointId) {
+        // A lambda captures the function pointer and instance, 
+        // and forwards any number of incoming arguments using a parameter pack.
+            _identifyMap[endpointId] = ([instance, func](Args&&... args) {
+            (instance->*func)(std::forward<Args>(args)...);
+        });
+    }
+
  
 private:
     // This callback is called for every attribute update. The callback implementation shall
@@ -155,10 +179,21 @@ private:
     
     // This callback is invoked when clients interact with the Identify Cluster.
     // In the callback implementation, an endpoint can identify itself. (e.g., by flashing an LED or light).
-    static esp_err_t identification_cb(esp_matter::identification::callback_type_t type, uint16_t endpoint_id, 
-                                    uint8_t effect_id, uint8_t effect_variant, void *priv_data);
+    static esp_err_t identification_cb(esp_matter::identification::callback_type_t type, uint16_t endpointId, 
+                                    uint8_t effectId, uint8_t effectVariant, void *priv_data);
 
     // Callback for Matter stack events. App can register callbacks
     static void matter_event_cb(const chip::DeviceLayer::ChipDeviceEvent *event, intptr_t arg);
 
 };
+
+#include "matterEndpoint.h"
+
+template <typename T>
+MatterEndpoint* MatterNode::createEndpoint(T& config)
+{
+    MatterEndpoint* endpoint = new MatterEndpoint(this);
+    endpoint->create_endpoint(_node, &config);
+    _endpointsMap[endpoint->getEndpointId()] = endpoint;
+    return endpoint;
+}

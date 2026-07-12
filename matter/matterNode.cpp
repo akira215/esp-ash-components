@@ -6,9 +6,10 @@
 */
 
 #include "matterNode.h"
-#include "esp_log_level.h"
+#include "matterEndpoint.h"
+//#include "esp_log_level.h"
 
-#define LOG_LOCAL_LEVEL ESP_LOG_VERBOSE
+//#define LOG_LOCAL_LEVEL ESP_LOG_VERBOSE
 
 
 #include <nvs_flash.h>
@@ -32,14 +33,22 @@ static const char *MATTER_NODE_TAG = "MatterNode";
 
 // Init static members:
 MatterNode::NodeMap_t MatterNode::_handlersMap = {};
+std::unordered_map<uint16_t, MatterNode::identifyCallback_t> MatterNode::_identifyMap = {};
 EventLoop* MatterNode::_eventLoop = new EventLoop("MatterEventLoop");
 
 // Static 
-esp_err_t MatterNode::identification_cb(esp_matter::identification::callback_type_t type, uint16_t endpoint_id, uint8_t effect_id,
-                                       uint8_t effect_variant, void *priv_data)
+esp_err_t MatterNode::identification_cb(esp_matter::identification::callback_type_t type, uint16_t endpointId, uint8_t effectId,
+                                       uint8_t effectVariant, void *priv_data)
 {
-    ESP_LOGI(MATTER_NODE_TAG, "Identification callback: type: %u, effect: %u, variant: %u", type, effect_id, effect_variant);
-    return ESP_OK;
+    esp_err_t err = ESP_OK;
+    ESP_LOGI(MATTER_NODE_TAG, "Identification callback endpoint %d: type: %u, effect: %u, variant: %u", 
+                                                            endpointId, type, effectId, effectVariant);
+    if (_identifyMap.contains(endpointId)) {
+        _eventLoop->enqueue(std::bind(std::ref(_identifyMap[endpointId]), type, effectId, effectVariant, std::move(priv_data)));
+        ESP_LOGD(MATTER_NODE_TAG, "Identification Endpoint %d - type: %u, effect: %u, variant: %u", endpointId, type, effectId, effectVariant);
+    }
+
+    return err;
 }
 
 // Static
@@ -166,7 +175,9 @@ MatterNode::MatterNode()
 
     // node handle can be used to add/modify other endpoints.
     _node = esp_matter::node::create(&node_config, attribute_update_cb, identification_cb);
-    ABORT_APP_ON_FAILURE(_node != nullptr, ESP_LOGE(MATTER_NODE_TAG, "Failed to create Matter node"));
+    
+    
+    ABORT_NODE_ON_FAILURE(_node != nullptr, ESP_LOGE(MATTER_NODE_TAG, "Failed to create Matter node"));
   
 }
 

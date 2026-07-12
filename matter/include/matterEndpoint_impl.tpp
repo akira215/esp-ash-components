@@ -7,10 +7,9 @@
 
 #pragma once
 
-
 #include "matterNode.h"
 
 template<typename C, typename... Args>
-void MatterAttribute::registerAttrUpdateHandler(void (C::* func)(Args...), C* instance) {
-    MatterNode::getInstance()->registerAttrUpdateHandler(func, instance, _endpointId, _clusterId, _attributeId);
+void MatterEndpoint::registerIdentifyHandler(void (C::* func)(Args...), C* instance ) {
+    MatterNode::getInstance()->registerIdentifyHandler(func, instance, getEndpointId());
 }
