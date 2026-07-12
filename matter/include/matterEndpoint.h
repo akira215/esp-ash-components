@@ -11,11 +11,12 @@
 #include <cstdint>
 #include <esp_matter_endpoint.h>
 #include <esp_log.h>
-#include "../utils/common_macros.h"
 
 #include <app/clusters/identify-server/identify-server.h> // For Identify struct
 
 #include "matterCluster.h"
+#include "matterUtils.h"
+
 #include <unordered_map>
 
 
@@ -89,7 +90,7 @@ public:
                         void *priv_data = nullptr) 
     {
         _endpoint  = call_create(node, config, flags, priv_data, type_holder<ConfigType>{});
-        ABORT_APP_ON_FAILURE(_endpoint != nullptr, ESP_LOGE("MatterEndpoint", "Failed to create extended endpoint"));
+        ABORT_NODE_ON_FAILURE(_endpoint != nullptr, ESP_LOGE("MatterEndpoint", "Failed to create extended endpoint"));
         
         // Populate the cluster map for this endpoint
         populate_cluster_map();

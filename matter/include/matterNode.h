@@ -43,13 +43,7 @@
     }
 #endif
 
-#define ABORT_NODE_ON_FAILURE(x, ...) do {           \
-        if (!(unlikely(x))) {                       \
-            __VA_ARGS__;                            \
-            vTaskDelay(5000 / portTICK_PERIOD_MS);  \
-            abort();                                \
-        }                                           \
-    } while (0)
+
 
 /*
 #ifdef CHIP_DEVICE_CONFIG_DEVICE_VENDOR_NAME

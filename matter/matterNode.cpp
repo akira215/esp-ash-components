@@ -7,9 +7,8 @@
 
 #include "matterNode.h"
 #include "matterEndpoint.h"
-//#include "esp_log_level.h"
 
-//#define LOG_LOCAL_LEVEL ESP_LOG_VERBOSE
+#include "matterUtils.h"
 
 
 #include <nvs_flash.h>
@@ -209,7 +208,7 @@ void MatterNode::start()
 
     // Matter start 
     esp_err_t err = esp_matter::start(matter_event_cb);
-    ABORT_APP_ON_FAILURE(err == ESP_OK, ESP_LOGE(MATTER_NODE_TAG, "Failed to start Matter, err:%d", err));
+    ABORT_NODE_ON_FAILURE(err == ESP_OK, ESP_LOGE(MATTER_NODE_TAG, "Failed to start Matter, err:%d", err));
 
 
 #if CONFIG_ENABLE_ENCRYPTED_OTA
