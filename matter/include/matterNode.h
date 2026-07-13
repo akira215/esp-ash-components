@@ -15,6 +15,11 @@
 
 #include "matterValue.h"
 
+class MatterEndpoint;
+
+
+
+
 #include <unordered_map>
 #include <vector>
 
@@ -63,7 +68,7 @@
 */
 
 // Forward declaration
-class MatterEndpoint;
+//class MatterEndpoint;
 
 
 // Singleton class to manage matter node
@@ -100,6 +105,18 @@ private:
     esp_matter::node_t*                             _node = nullptr;
     std::unordered_map<uint16_t,MatterEndpoint*>    _endpointsMap;
 
+    // A generic helper tag to pass the type context
+    template <typename T> struct type_holder {};
+
+    // Universal ADL bridge to create the endpoint based on config type
+    template <typename ConfigType>
+    esp_matter::endpoint_t* call_createEndpoint( ConfigType *config, uint8_t flags, void *priv_data, type_holder<ConfigType>) {
+        // This allows ADL to automatically resolve down to the matching child namespace!
+        using namespace esp_matter::endpoint;
+        // Unqualified call allows the compiler to find the 'create' that matches your ConfigType
+        return create(getEspNode(), config, flags, priv_data);
+    }
+
 public:  
     ~MatterNode();
 
@@ -116,14 +133,19 @@ public:
     esp_matter::node_t* getEspNode() { return _node; };
 
     // Create an Endpoint type should be for example extended_color_light::config_t
-    template <typename T>
-    MatterEndpoint* createEndpoint(T& config);
+    //template <typename T>
+    //MatterEndpoint* createEndpoint(T& config);
         
     void factoryReset();
     
     void start();
 
     MatterEndpoint* getEndpoint(uint16_t endpointId);
+
+    template <typename ConfigType>
+    MatterEndpoint* createEndpoint(ConfigType* config,
+                                    uint8_t flags = esp_matter::ENDPOINT_FLAG_NONE, 
+                                    void *priv_data = nullptr);
 
     
 
@@ -183,11 +205,17 @@ private:
 
 #include "matterEndpoint.h"
 
-template <typename T>
-MatterEndpoint* MatterNode::createEndpoint(T& config)
+template <typename ConfigType>
+MatterEndpoint* MatterNode::createEndpoint(ConfigType* config,
+                                uint8_t flags, 
+                                void *priv_data) 
 {
-    MatterEndpoint* endpoint = new MatterEndpoint(this);
-    endpoint->create_endpoint(_node, &config);
-    _endpointsMap[endpoint->getEndpointId()] = endpoint;
-    return endpoint;
+    esp_matter::endpoint_t* endpoint  = call_createEndpoint(config, flags, priv_data, type_holder<ConfigType>{});
+
+    ABORT_NODE_ON_FAILURE(endpoint != nullptr, ESP_LOGE("MatterEndpoint", "Failed to create extended endpoint"));
+        
+    MatterEndpoint* mEndpoint = new MatterEndpoint(this, endpoint);
+    //endpoint->create_endpoint(_node, &config);
+    _endpointsMap[mEndpoint->getEndpointId()] = mEndpoint;
+    return mEndpoint;
 }

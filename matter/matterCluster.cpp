@@ -15,7 +15,7 @@ static const char *TAG = "MatterCluster";
 MatterCluster::MatterCluster(MatterEndpoint* enpoint, esp_matter::cluster_t* cluster) :
                             _endpoint(enpoint), _cluster(cluster)
 {
-  refreshAttributes();
+    populateAttributes();
 }
 
 MatterCluster::~MatterCluster()
@@ -36,7 +36,7 @@ MatterAttribute* MatterCluster::getAttribute(uint32_t attributeId)
     return nullptr;
 }
 
-void MatterCluster::refreshAttributes()
+void MatterCluster::populateAttributes()
 {
     esp_matter::attribute_t *attribute = esp_matter::attribute::get_first(_cluster);
     while (attribute) {

@@ -10,9 +10,9 @@
 
 static const char *TAG = "MatterEndpoint";
 
-MatterEndpoint::MatterEndpoint(MatterNode* node) : _node(node)
+MatterEndpoint::MatterEndpoint(MatterNode* node, esp_matter::endpoint_t* endpoint ) : _node(node), _endpoint(endpoint)
 {
-
+    populateCluster();
 }
 
 MatterEndpoint::~MatterEndpoint()
@@ -23,7 +23,7 @@ MatterEndpoint::~MatterEndpoint()
     _clustersMap.clear();
 }
 
-void MatterEndpoint::populate_cluster_map()
+void MatterEndpoint::populateCluster()
 {
     esp_matter::cluster_t* cluster = esp_matter::cluster::get_first(_endpoint);
 

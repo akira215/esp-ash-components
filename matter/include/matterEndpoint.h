@@ -8,6 +8,7 @@
 #pragma once
 
 #include "esp_matter_data_model.h"
+#include "esp_matter_cluster.h"
 #include <cstdint>
 #include <esp_matter_endpoint.h>
 #include <esp_log.h>
@@ -19,7 +20,7 @@
 
 #include <unordered_map>
 
-
+class MatterNode;
 
 #define ENDPOINT_CONFIG(DeviceType) ::esp_matter::endpoint::DeviceType::config_t
 
@@ -35,8 +36,9 @@ class MatterNode;
 /// store maps of cluster and cluster list as per SDK requirements
 class MatterEndpoint
 {
-    esp_matter::endpoint_t* _endpoint = nullptr;
     MatterNode*             _node     = nullptr;
+    esp_matter::endpoint_t* _endpoint = nullptr;
+    
 
     std::unordered_map<uint32_t,MatterCluster*> _clustersMap;
 /*
@@ -64,7 +66,7 @@ class MatterEndpoint
 */
     // A generic helper tag to pass the type context
     template <typename T> struct type_holder {};
-
+/*
     // Universal ADL bridge to create the endpoint based on config type
     template <typename ConfigType>
     auto call_create(esp_matter::node_t *node, ConfigType *config, uint8_t flags, void *priv_data, type_holder<ConfigType>) {
@@ -73,16 +75,35 @@ class MatterEndpoint
         // Unqualified call allows the compiler to find the 'create' that matches your ConfigType
         return create(node, config, flags, priv_data);
     }
+*/
+    // Universal ADL bridge to create the cluster based on config type
+    template <typename ConfigType>
+    esp_matter::cluster_t* call_createCluster(ConfigType *config, uint8_t flags, type_holder<ConfigType>) {
+        // This allows ADL to automatically resolve down to the matching child namespace!
+        using namespace esp_matter::cluster;
+        // Unqualified call allows the compiler to find the 'create' that matches your ConfigType
+
+        return create( _endpoint, config, flags);
+    }
+
 
     // Run when endpoint is created to populate the cluster map for this endpoint
-    void populate_cluster_map();
+    void populateCluster();
 
 public:
   
     /// @brief Constructor create the end point
-    MatterEndpoint(MatterNode* node);
+    MatterEndpoint(MatterNode* node, esp_matter::endpoint_t* endpoint);
     ~MatterEndpoint();
 
+    esp_matter::endpoint_t* getEspEndpoint() { return _endpoint; }
+
+    uint16_t getEndpointId() { 
+        if(_endpoint)
+            return esp_matter::endpoint::get_id(_endpoint); 
+        return (uint16_t)(-1);
+    } 
+/*
     template <typename ConfigType>
     void create_endpoint(esp_matter::node_t *node,       
                         ConfigType *config, 
@@ -95,13 +116,33 @@ public:
         // Populate the cluster map for this endpoint
         populate_cluster_map();
     }
+*/
 
-    esp_matter::endpoint_t* getEspEndpoint() { return _endpoint; }
-    uint16_t getEndpointId() { 
-        if(_endpoint)
-            return esp_matter::endpoint::get_id(_endpoint); 
-        return (uint16_t)(-1);
-    } 
+    template <typename ConfigType>
+    MatterCluster* createCluster( ConfigType *config, 
+                        uint8_t flags = esp_matter::ENDPOINT_FLAG_NONE ) 
+    {
+        esp_matter::cluster_t *cluster = call_createCluster(config, flags, type_holder<ConfigType>{});
+        if (cluster == nullptr){
+            ESP_LOGE("MatterEndpoint", "Failed to create cluster");
+            return nullptr;
+        }
+        // Populate the cluster map for this endpoint
+
+        MatterCluster* mCluster = new MatterCluster(this, cluster);
+        if (mCluster == nullptr)
+            ESP_LOGE("MatterEndpoint", "Failed to create matter cluster");
+
+        if (_clustersMap.contains(mCluster->getClusterId()))
+            ESP_LOGE("MatterEndpoint", "Cluster with Id %d already exists in the endpoint %d, it will be erased",
+                                        mCluster->getClusterId(),
+                                        getEndpointId());
+
+        _clustersMap[mCluster->getClusterId()] = mCluster;
+
+        return mCluster;
+    }
+
 
     // If flags = esp_matter::CLUSTER_FLAG_NONE, the first cluster is returned
     MatterCluster* getCluster(uint32_t clusterId);

@@ -15,6 +15,22 @@
 #include "esp_matter_feature.h"
 
 
+// trick to force wrapper to select correct create function 
+// as user_label::config_t is an alias of  commom::config_t
+namespace esp_matter {
+namespace cluster {
+namespace user_label {
+
+struct adl_config_t : common::config_t {
+    using common::config_t::config_t;
+};
+
+} // namespace user_label
+} // namespace cluster
+} // namespace esp_matter
+
+
+
 #define CLUSTER_ID(ClusterName) ::chip::app::Clusters::ClusterName::Id
 
 // cluster and feature are in the file esp_matter_feature.h
@@ -82,8 +98,10 @@ class MatterCluster
         return add(_cluster, config);
     }
 
-
     esp_matter::cluster_t*              _cluster = nullptr;
+
+    void populateAttributes();
+
 public:
 
     /// @brief Constructor create the cluster
@@ -130,10 +148,8 @@ public:
             ESP_LOGE("MatterCluster", "Failed to add feature");
         
         // Populate the attribute map 
-        refreshAttributes(); 
+        populateAttributes(); 
     }
-
-    void refreshAttributes();
     
     MatterAttribute* addAttribute(uint32_t attributeId, 
                             uint8_t flags = esp_matter::ATTRIBUTE_FLAG_NONE, 

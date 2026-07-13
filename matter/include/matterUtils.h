@@ -7,7 +7,7 @@
 
 #pragma once
 
-#define ABORT_NODE_ON_FAILURE(x, ...) do {           \
+#define ABORT_NODE_ON_FAILURE(x, ...) do {          \
         if (!(unlikely(x))) {                       \
             __VA_ARGS__;                            \
             vTaskDelay(5000 / portTICK_PERIOD_MS);  \
