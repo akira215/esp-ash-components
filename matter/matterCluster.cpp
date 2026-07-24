@@ -6,6 +6,7 @@
 */
 
 #include "matterCluster.h"
+#include <cstdint>
 #include <matterAttribute.h>
 #include "esp_matter_data_model.h"
 #include <matterEndpoint.h>
@@ -20,24 +21,16 @@ MatterCluster::MatterCluster(MatterEndpoint* enpoint, esp_matter::cluster_t* clu
 
 MatterCluster::~MatterCluster()
 {
-    for (auto &item : _attributesMap) {
-        delete item.second;
-    }
     _attributesMap.clear();
 }
 
 
-MatterAttribute* MatterCluster::getAttribute(uint32_t attributeId)
-{
-    if (_attributesMap.contains(attributeId)) {
-        return _attributesMap[attributeId];
-    }
-    ESP_LOGW(TAG, "getAttribute - No attribute with ID %d to cluster %d, return nullptr", attributeId, getClusterId());
-    return nullptr;
-}
-
 void MatterCluster::populateAttributes()
 {
+    uint32_t size = getAttributeCount();
+    if (size > _attributesMap.size())
+        _attributesMap.reserve(size);
+
     esp_matter::attribute_t *attribute = esp_matter::attribute::get_first(_cluster);
     while (attribute) {
         if (!_attributesMap.contains(esp_matter::attribute::get_id(attribute))) {
@@ -49,14 +42,46 @@ void MatterCluster::populateAttributes()
     }
 }
 
+ uint32_t MatterCluster::getAttributeCount() const
+ {
+    if (!_cluster) {
+        return 0;
+    }
+
+    uint32_t count = 0;
+    // Pass NULL initially to get the first attribute of the cluster
+    esp_matter::attribute_t *attr = esp_matter::attribute::get_first(_cluster);
+
+    while (attr != NULL) {
+        count++;
+        // Fetch the next attribute using the current one as a reference
+        attr = esp_matter::attribute::get_next(attr);
+    }
+
+    return count;
+ }
+
+
+MatterAttribute* MatterCluster::getAttribute(uint32_t attributeId)
+{
+    MatterAttribute* attr = _attributesMap[attributeId];
+    if (attr == nullptr) {
+        ESP_LOGW(TAG, "getAttribute - No attribute with ID %d to cluster %d, return nullptr", attributeId, getClusterId());
+    }
+
+    return attr;
+}
+
 
 MatterAttribute* MatterCluster::addAttribute(uint32_t attributeId, uint8_t flags, MatterValue value)
  {
-    if (_attributesMap.contains(attributeId)) {
+    MatterAttribute* attr = _attributesMap.at(attributeId);
+    if (attr != nullptr) {
         ESP_LOGI(TAG,"addAttribute id %d in cluster %d already exists", attributeId, getClusterId());
-        return _attributesMap[attributeId];
+        return attr;
     }
 
+    
     // 4. Create and attach the attribute to the parent cluster
     esp_matter::attribute_t *newAttribute = esp_matter::attribute::create(_cluster, 
                                                                 attributeId,

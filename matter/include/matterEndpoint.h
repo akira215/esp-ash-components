@@ -8,7 +8,7 @@
 #pragma once
 
 #include "esp_matter_data_model.h"
-#include "esp_matter_cluster.h"
+//#include "esp_matter_cluster.h"
 #include <cstdint>
 #include <esp_matter_endpoint.h>
 #include <esp_log.h>
@@ -16,9 +16,7 @@
 #include <app/clusters/identify-server/identify-server.h> // For Identify struct
 
 #include "matterCluster.h"
-#include "matterUtils.h"
-
-#include <unordered_map>
+#include "matterMap.h"
 
 class MatterNode;
 
@@ -39,8 +37,7 @@ class MatterEndpoint
     MatterNode*             _node     = nullptr;
     esp_matter::endpoint_t* _endpoint = nullptr;
     
-
-    std::unordered_map<uint32_t,MatterCluster*> _clustersMap;
+    MatterMap<MatterCluster*> _clustersMap;
 /*
     // From esp_matter_data_model.cpp
     struct deviceType_t {
@@ -66,16 +63,7 @@ class MatterEndpoint
 */
     // A generic helper tag to pass the type context
     template <typename T> struct type_holder {};
-/*
-    // Universal ADL bridge to create the endpoint based on config type
-    template <typename ConfigType>
-    auto call_create(esp_matter::node_t *node, ConfigType *config, uint8_t flags, void *priv_data, type_holder<ConfigType>) {
-        // This allows ADL to automatically resolve down to the matching child namespace!
-        using namespace esp_matter::endpoint;
-        // Unqualified call allows the compiler to find the 'create' that matches your ConfigType
-        return create(node, config, flags, priv_data);
-    }
-*/
+
     // Universal ADL bridge to create the cluster based on config type
     template <typename ConfigType>
     esp_matter::cluster_t* call_createCluster(ConfigType *config, uint8_t flags, type_holder<ConfigType>) {
@@ -103,20 +91,6 @@ public:
             return esp_matter::endpoint::get_id(_endpoint); 
         return (uint16_t)(-1);
     } 
-/*
-    template <typename ConfigType>
-    void create_endpoint(esp_matter::node_t *node,       
-                        ConfigType *config, 
-                        uint8_t flags = esp_matter::ENDPOINT_FLAG_NONE, 
-                        void *priv_data = nullptr) 
-    {
-        _endpoint  = call_create(node, config, flags, priv_data, type_holder<ConfigType>{});
-        ABORT_NODE_ON_FAILURE(_endpoint != nullptr, ESP_LOGE("MatterEndpoint", "Failed to create extended endpoint"));
-        
-        // Populate the cluster map for this endpoint
-        populate_cluster_map();
-    }
-*/
 
     template <typename ConfigType>
     MatterCluster* createCluster( ConfigType *config, 
@@ -146,6 +120,8 @@ public:
 
     // If flags = esp_matter::CLUSTER_FLAG_NONE, the first cluster is returned
     MatterCluster* getCluster(uint32_t clusterId);
+
+    uint32_t getClusterCount() const;
 
     /// @brief register identify .
     /// Update handler shall be type identifyCallback_t : 

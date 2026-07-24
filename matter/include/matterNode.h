@@ -18,8 +18,6 @@
 class MatterEndpoint;
 
 
-
-
 #include <unordered_map>
 #include <vector>
 
@@ -66,9 +64,6 @@ class MatterEndpoint;
 #endif
 #define CHIP_DEVICE_CONFIG_DEFAULT_NODE_LABEL "Akira Node"
 */
-
-// Forward declaration
-//class MatterEndpoint;
 
 
 // Singleton class to manage matter node
@@ -203,19 +198,5 @@ private:
 
 };
 
-#include "matterEndpoint.h"
-
-template <typename ConfigType>
-MatterEndpoint* MatterNode::createEndpoint(ConfigType* config,
-                                uint8_t flags, 
-                                void *priv_data) 
-{
-    esp_matter::endpoint_t* endpoint  = call_createEndpoint(config, flags, priv_data, type_holder<ConfigType>{});
-
-    ABORT_NODE_ON_FAILURE(endpoint != nullptr, ESP_LOGE("MatterEndpoint", "Failed to create extended endpoint"));
-        
-    MatterEndpoint* mEndpoint = new MatterEndpoint(this, endpoint);
-    //endpoint->create_endpoint(_node, &config);
-    _endpointsMap[mEndpoint->getEndpointId()] = mEndpoint;
-    return mEndpoint;
-}
+// Include the implementation at the very bottom
+#include "matterNode_impl.tpp" 

@@ -7,10 +7,9 @@
 
 #pragma once
 
-
 #include <esp_matter_endpoint.h>
 
-#include <unordered_map>
+#include "matterMap.h"
 #include "matterValue.h"
 #include "esp_matter_feature.h"
 
@@ -49,8 +48,10 @@ class MatterAttribute;
 class MatterCluster
 {
     MatterEndpoint*                     _endpoint = nullptr;
+    esp_matter::cluster_t*              _cluster = nullptr;
    
-    std::unordered_map<uint32_t,MatterAttribute*> _attributesMap;
+    MatterMap<MatterAttribute*> _attributesMap;
+
 /*
     // from esp_matter_data_model.cpp
     struct command_t {
@@ -98,7 +99,6 @@ class MatterCluster
         return add(_cluster, config);
     }
 
-    esp_matter::cluster_t*              _cluster = nullptr;
 
     void populateAttributes();
 
@@ -123,11 +123,13 @@ public:
         return (uint32_t)(-1);
     }
 
-    uint8_t  getFlags()     { 
+    uint8_t getFlags()     { 
         if (_cluster)
             return esp_matter::cluster::get_flags(_cluster);
         return (uint8_t)(-1);
     }
+
+    uint32_t getAttributeCount() const;
 
     bool     isClient()     { return (getFlags()  & esp_matter::CLUSTER_FLAG_CLIENT) != 0; }
     bool     isServer()     { return (getFlags()  & esp_matter::CLUSTER_FLAG_SERVER) != 0; }
