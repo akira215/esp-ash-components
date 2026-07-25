@@ -28,7 +28,7 @@
 
 #include <string>
 
-static const char *MATTER_NODE_TAG = "MatterNode";
+static const char *TAG = "MatterNode";
 
 // Init static members:
 MatterNode::NodeMap_t                       MatterNode::_handlersMap = {};
@@ -41,14 +41,14 @@ esp_err_t MatterNode::identification_cb(esp_matter::identification::callback_typ
                                        uint8_t effectVariant, void *priv_data)
 {
     esp_err_t err = ESP_OK;
-    ESP_LOGI(MATTER_NODE_TAG, "Identification callback endpoint %d: type: %u, effect: %u, variant: %u", 
+    ESP_LOGI(TAG, "Identification callback endpoint %d: type: %u, effect: %u, variant: %u", 
                                                             endpointId, type, effectId, effectVariant);
 
     const identifyCallback_t* cb = _identifyMap.get(static_cast<uint32_t>(endpointId));
 
     if(cb) {
         _eventLoop->enqueue(std::bind(std::ref(*cb), type, effectId, effectVariant, std::move(priv_data)));
-        ESP_LOGD(MATTER_NODE_TAG, "Identification Endpoint %d - type: %u, effect: %u, variant: %u", endpointId, type, effectId, effectVariant);
+        ESP_LOGD(TAG, "Identification Endpoint %d - type: %u, effect: %u, variant: %u", endpointId, type, effectId, effectVariant);
     }
 
     return err;
@@ -68,7 +68,7 @@ esp_err_t MatterNode::attribute_update_cb(esp_matter::attribute::callback_type_t
             auto attrVector = clusterMap ->get(attributeId);
             for (auto & cb : (*attrVector) ) {
                 _eventLoop->enqueue(std::bind(std::ref(cb), type, std::move(static_cast<MatterValue*>(val)), std::move(priv_data)));
-                ESP_LOGD(MATTER_NODE_TAG, "Cluster %d - attribute %d - type %u : event posted,",  clusterId, attributeId, (*val).type);
+                ESP_LOGD(TAG, "Cluster %d - attribute %d - type %u : event posted,",  clusterId, attributeId, (*val).type);
             }
         }
     }
@@ -81,35 +81,35 @@ void MatterNode::matter_event_cb(const chip::DeviceLayer::ChipDeviceEvent *event
 {
     switch (event->Type) {
     case chip::DeviceLayer::DeviceEventType::kInterfaceIpAddressChanged:
-        ESP_LOGI(MATTER_NODE_TAG, "Interface IP Address changed");
+        ESP_LOGI(TAG, "Interface IP Address changed");
         break;
 
     case chip::DeviceLayer::DeviceEventType::kCommissioningComplete:
-        ESP_LOGI(MATTER_NODE_TAG, "Commissioning complete");
+        ESP_LOGI(TAG, "Commissioning complete");
         break;
 
     case chip::DeviceLayer::DeviceEventType::kFailSafeTimerExpired:
-        ESP_LOGI(MATTER_NODE_TAG, "Commissioning failed, fail safe timer expired");
+        ESP_LOGI(TAG, "Commissioning failed, fail safe timer expired");
         break;
 
     case chip::DeviceLayer::DeviceEventType::kCommissioningSessionStarted:
-        ESP_LOGI(MATTER_NODE_TAG, "Commissioning session started");
+        ESP_LOGI(TAG, "Commissioning session started");
         break;
 
     case chip::DeviceLayer::DeviceEventType::kCommissioningSessionStopped:
-        ESP_LOGI(MATTER_NODE_TAG, "Commissioning session stopped");
+        ESP_LOGI(TAG, "Commissioning session stopped");
         break;
 
     case chip::DeviceLayer::DeviceEventType::kCommissioningWindowOpened:
-        ESP_LOGI(MATTER_NODE_TAG, "Commissioning window opened");
+        ESP_LOGI(TAG, "Commissioning window opened");
         break;
 
     case chip::DeviceLayer::DeviceEventType::kCommissioningWindowClosed:
-        ESP_LOGI(MATTER_NODE_TAG, "Commissioning window closed");
+        ESP_LOGI(TAG, "Commissioning window closed");
         break;
 
     case chip::DeviceLayer::DeviceEventType::kFabricRemoved: {
-        ESP_LOGI(MATTER_NODE_TAG, "Fabric removed successfully");
+        ESP_LOGI(TAG, "Fabric removed successfully");
         if (chip::Server::GetInstance().GetFabricTable().FabricCount() == 0) {
             chip::CommissioningWindowManager  &commissionMgr = chip::Server::GetInstance().GetCommissioningWindowManager();
             constexpr auto kTimeoutSeconds = chip::System::Clock::Seconds16(CONFIG_K_TIMEOUT);
@@ -120,7 +120,7 @@ void MatterNode::matter_event_cb(const chip::DeviceLayer::ChipDeviceEvent *event
                 CHIP_ERROR err = commissionMgr.OpenBasicCommissioningWindow(kTimeoutSeconds,
                                                                             chip::CommissioningWindowAdvertisement::kDnssdOnly);
                 if (err != CHIP_NO_ERROR) {
-                    ESP_LOGE(MATTER_NODE_TAG, "Failed to open commissioning window, err:%" CHIP_ERROR_FORMAT, err.Format());
+                    ESP_LOGE(TAG, "Failed to open commissioning window, err:%" CHIP_ERROR_FORMAT, err.Format());
                 }
             }
         }
@@ -128,19 +128,19 @@ void MatterNode::matter_event_cb(const chip::DeviceLayer::ChipDeviceEvent *event
     }
 
     case chip::DeviceLayer::DeviceEventType::kFabricWillBeRemoved:
-        ESP_LOGI(MATTER_NODE_TAG, "Fabric will be removed");
+        ESP_LOGI(TAG, "Fabric will be removed");
         break;
 
     case chip::DeviceLayer::DeviceEventType::kFabricUpdated:
-        ESP_LOGI(MATTER_NODE_TAG, "Fabric is updated");
+        ESP_LOGI(TAG, "Fabric is updated");
         break;
 
     case chip::DeviceLayer::DeviceEventType::kFabricCommitted:
-        ESP_LOGI(MATTER_NODE_TAG, "Fabric is committed");
+        ESP_LOGI(TAG, "Fabric is committed");
         break;
 
     case chip::DeviceLayer::DeviceEventType::kBLEDeinitialized:
-        ESP_LOGI(MATTER_NODE_TAG, "BLE deinitialized and memory reclaimed");
+        ESP_LOGI(TAG, "BLE deinitialized and memory reclaimed");
         break;
 
     default:
@@ -166,13 +166,20 @@ MatterNode::MatterNode()
     // TODO not working
     std::string data = "Akira Node";
     std::strcpy(node_config.root_node.basic_information.node_label , data.c_str());
-    ESP_LOGE(MATTER_NODE_TAG, "Name of the device root node: %s", node_config.root_node.basic_information.node_label);
+    ESP_LOGE(TAG, "Name of the device root node: %s", node_config.root_node.basic_information.node_label);
 
     // node handle can be used to add/modify other endpoints.
     _node = esp_matter::node::create(&node_config, attribute_update_cb, identification_cb);
     
     
-    ABORT_NODE_ON_FAILURE(_node != nullptr, ESP_LOGE(MATTER_NODE_TAG, "Failed to create Matter node"));
+    ABORT_NODE_ON_FAILURE(_node != nullptr, ESP_LOGE(TAG, "Failed to create Matter node"));
+
+    // Initialize the OTA Requestor agent
+#if CONFIG_ENABLE_OTA_REQUESTOR
+    esp_err_t err =esp_matter_ota_requestor_init();
+    if (err != ESP_OK)
+        ESP_LOGE(TAG, "Error calling esp_matter_ota_requestor_init: %d", err);
+#endif
   
 }
 
@@ -183,7 +190,7 @@ MatterNode::~MatterNode()
 
 void MatterNode::factoryReset()
 {
-    ESP_LOGI(MATTER_NODE_TAG, "Performing Node factory reset .....");
+    ESP_LOGI(TAG, "Performing Node factory reset .....");
     esp_matter::factory_reset();
 }
 
@@ -201,12 +208,12 @@ void MatterNode::start()
 
     // Matter start 
     esp_err_t err = esp_matter::start(matter_event_cb);
-    ABORT_NODE_ON_FAILURE(err == ESP_OK, ESP_LOGE(MATTER_NODE_TAG, "Failed to start Matter, err:%d", err));
+    ABORT_NODE_ON_FAILURE(err == ESP_OK, ESP_LOGE(TAG, "Failed to start Matter, err:%d", err));
 
 
 #if CONFIG_ENABLE_ENCRYPTED_OTA
     err = esp_matter_ota_requestor_encrypted_init(s_decryption_key, s_decryption_key_len);
-    ABORT_APP_ON_FAILURE(err == ESP_OK, ESP_LOGE(MATTER_NODE_TAG, "Failed to initialized the encrypted OTA, err: %d", err));
+    ABORT_APP_ON_FAILURE(err == ESP_OK, ESP_LOGE(TAG, "Failed to initialized the encrypted OTA, err: %d", err));
 #endif // CONFIG_ENABLE_ENCRYPTED_OTA
 
 #if CONFIG_ENABLE_CHIP_SHELL
