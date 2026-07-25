@@ -14,11 +14,7 @@
 #include "esp_matter_attribute_utils.h"
 
 #include "matterValue.h"
-
-class MatterEndpoint;
-
-
-#include <unordered_map>
+#include "matterMap.h"
 #include <vector>
 
 
@@ -48,6 +44,7 @@ class MatterEndpoint;
 
 
 
+
 /*
 #ifdef CHIP_DEVICE_CONFIG_DEVICE_VENDOR_NAME
     #undef CHIP_DEVICE_CONFIG_DEVICE_VENDOR_NAME
@@ -65,6 +62,7 @@ class MatterEndpoint;
 #define CHIP_DEVICE_CONFIG_DEFAULT_NODE_LABEL "Akira Node"
 */
 
+class MatterEndpoint;
 
 // Singleton class to manage matter node
 class MatterNode
@@ -87,18 +85,20 @@ private:
     /// @brief Constructor is protected (singleton) 
     MatterNode();
 
+    // Map of callback attributes
     // Type aliases to make the code highly readable
-    using ClusterMap_t    = std::unordered_map<uint32_t, std::vector<attrUpdateCallback_t>>;   // AttributID -> 
-    using EndpointMap_t   = std::unordered_map<uint32_t, ClusterMap_t>;     // ClusterID -> 
-    using NodeMap_t       = std::unordered_map<uint16_t, EndpointMap_t>;    // EndpointID Base Node Database
+    using ClusterMap_t    = MatterMap<std::vector<attrUpdateCallback_t>>;   // AttributID -> 
+    using EndpointMap_t   = MatterMap<ClusterMap_t>;                            // ClusterID -> 
+    using NodeMap_t       = MatterMap<EndpointMap_t>;    // EndpointID Base Node Database
+
+    static MatterMap<identifyCallback_t>    _identifyMap;
+
+    static MatterMap<MatterEndpoint*>    _endpointsMap;
 
     static NodeMap_t   _handlersMap;  // This maps contains all the registered handlers for all attributes
     static EventLoop*  _eventLoop;
 
-    static std::unordered_map<uint16_t,identifyCallback_t>    _identifyMap;
-
     esp_matter::node_t*                             _node = nullptr;
-    std::unordered_map<uint16_t,MatterEndpoint*>    _endpointsMap;
 
     // A generic helper tag to pass the type context
     template <typename T> struct type_holder {};
@@ -157,7 +157,7 @@ public:
                                     uint32_t attrId) {
         // A lambda captures the function pointer and instance, 
         // and forwards any number of incoming arguments using a parameter pack.
-            _handlersMap[endpointId][clusterId][attrId].push_back([instance, func](Args&&... args) {
+            _handlersMap[static_cast<uint32_t>(endpointId)][clusterId][attrId].push_back([instance, func](Args&&... args) {
             (instance->*func)(std::forward<Args>(args)...);
         });
     }
@@ -173,7 +173,7 @@ public:
                                     uint16_t endpointId) {
         // A lambda captures the function pointer and instance, 
         // and forwards any number of incoming arguments using a parameter pack.
-            _identifyMap[endpointId] = ([instance, func](Args&&... args) {
+            _identifyMap[static_cast<uint32_t>(endpointId)] = ([instance, func](Args&&... args) {
             (instance->*func)(std::forward<Args>(args)...);
         });
     }

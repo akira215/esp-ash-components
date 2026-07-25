@@ -31,8 +31,9 @@
 static const char *MATTER_NODE_TAG = "MatterNode";
 
 // Init static members:
-MatterNode::NodeMap_t MatterNode::_handlersMap = {};
-std::unordered_map<uint16_t, MatterNode::identifyCallback_t> MatterNode::_identifyMap = {};
+MatterNode::NodeMap_t                       MatterNode::_handlersMap = {};
+MatterMap<MatterNode::identifyCallback_t>   MatterNode::_identifyMap = {};
+MatterMap<MatterEndpoint*>                  MatterNode::_endpointsMap = {};
 EventLoop* MatterNode::_eventLoop = new EventLoop("MatterEventLoop");
 
 // Static 
@@ -42,8 +43,11 @@ esp_err_t MatterNode::identification_cb(esp_matter::identification::callback_typ
     esp_err_t err = ESP_OK;
     ESP_LOGI(MATTER_NODE_TAG, "Identification callback endpoint %d: type: %u, effect: %u, variant: %u", 
                                                             endpointId, type, effectId, effectVariant);
-    if (_identifyMap.contains(endpointId)) {
-        _eventLoop->enqueue(std::bind(std::ref(_identifyMap[endpointId]), type, effectId, effectVariant, std::move(priv_data)));
+
+    const identifyCallback_t* cb = _identifyMap.get(static_cast<uint32_t>(endpointId));
+
+    if(cb) {
+        _eventLoop->enqueue(std::bind(std::ref(*cb), type, effectId, effectVariant, std::move(priv_data)));
         ESP_LOGD(MATTER_NODE_TAG, "Identification Endpoint %d - type: %u, effect: %u, variant: %u", endpointId, type, effectId, effectVariant);
     }
 
@@ -56,27 +60,19 @@ esp_err_t MatterNode::attribute_update_cb(esp_matter::attribute::callback_type_t
                                             uint32_t attributeId, esp_matter_attr_val_t *val, void *priv_data)
 {
     esp_err_t err = ESP_OK;
-    
-    if (_handlersMap.contains(endpointId)) {
-        if (_handlersMap[endpointId].contains(clusterId)) {
-            if (_handlersMap[endpointId][clusterId].contains(attributeId)) {
-                // Call all the registered callback Id
-                for (auto & cb : _handlersMap[endpointId][clusterId][attributeId]) {
 
-                    _eventLoop->enqueue(std::bind(std::ref(cb), type, std::move(static_cast<MatterValue*>(val)), std::move(priv_data)));
-                    ESP_LOGD(MATTER_NODE_TAG, "Cluster %d - attribute %d - type %u : event posted,",  clusterId, attributeId, (*val).type);
-
-                }      
-            } else {
-                //err = ESP_ERR_NOT_FOUND;
+    const EndpointMap_t* endpointMap = _handlersMap.get(static_cast<uint32_t>(endpointId));
+    if(endpointMap) {
+        const ClusterMap_t* clusterMap = endpointMap->get(clusterId);
+        if(clusterMap){
+            auto attrVector = clusterMap ->get(attributeId);
+            for (auto & cb : (*attrVector) ) {
+                _eventLoop->enqueue(std::bind(std::ref(cb), type, std::move(static_cast<MatterValue*>(val)), std::move(priv_data)));
+                ESP_LOGD(MATTER_NODE_TAG, "Cluster %d - attribute %d - type %u : event posted,",  clusterId, attributeId, (*val).type);
             }
-        } else {
-            //err = ESP_ERR_NOT_FOUND;
         }
-    } else {
-        //err = ESP_ERR_NOT_FOUND;
     }
-    
+
     return err;
 }
 
@@ -182,9 +178,6 @@ MatterNode::MatterNode()
 
 MatterNode::~MatterNode()
 {
-    for (auto &item : _endpointsMap) {
-        delete item.second;
-    }
     _endpointsMap.clear();
 }
 
@@ -228,11 +221,8 @@ void MatterNode::start()
 
 MatterEndpoint* MatterNode::getEndpoint(uint16_t endpointId)
 {
-    if (_endpointsMap.contains(endpointId)) {
-        return _endpointsMap[endpointId];
-    }
-
-    return nullptr;
+    // return nullptr if it doesn't exist
+    return _endpointsMap[static_cast<uint32_t>(endpointId)];
 }
 
 

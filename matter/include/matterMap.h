@@ -12,13 +12,11 @@
 #include "freertos/semphr.h" // Required for Semaphore/Mutex APIs
 #include "esp_log.h"
 
-/// @brief clas to implement fast and memory efficient ordered map
-/// 
-
+/// @brief clas to implement fast and memory efficient ordered map, index is uint32_t
+/// @tparam T type of value to store in map
 template <typename T> 
 class MatterMap 
 {
-
 
     struct map_t {
         uint32_t id;
@@ -42,6 +40,22 @@ class MatterMap
 public:
     MatterMap() { _mutex = xSemaphoreCreateMutex(); }
     ~MatterMap() { if (_mutex != nullptr) vSemaphoreDelete(_mutex);   }
+
+    // Move constructor and assigment operator
+    MatterMap(MatterMap&& other) noexcept
+        : _map(std::move(other._map)), _mutex(other._mutex)
+    { other._mutex = nullptr; }
+
+    MatterMap& operator=(MatterMap&& other) noexcept
+    {
+        if (this != &other) {
+            if (_mutex) vSemaphoreDelete(_mutex);
+            _map = std::move(other._map);
+            _mutex = other._mutex;
+            other._mutex = nullptr;
+        }
+        return *this;
+    }
 
     // Expose manual locking for safe raw reference/pointer manipulation
     void lock() const { xSemaphoreTake(_mutex, portMAX_DELAY);  }
