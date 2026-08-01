@@ -94,9 +94,8 @@ void Ws2812::send()
         return;
     }
     
-    rmt_transmit_config_t tx_config = {
-        .loop_count = 0 // unique transmission
-    };
+    rmt_transmit_config_t tx_config = {};
+    tx_config.loop_count = 0; // unique transmission
 
     
     // Check if TX is ongoing
