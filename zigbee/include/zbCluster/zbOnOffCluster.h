@@ -8,7 +8,7 @@
 #pragma once
 
 #include "zbCluster.h"
-#include "zcl\esp_zigbee_zcl_on_off.h"
+#include "zcl/esp_zigbee_zcl_on_off.h"
 
 class ZbOnOffCluster : public ZbCluster
 {

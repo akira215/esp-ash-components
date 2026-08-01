@@ -76,7 +76,7 @@ void Main::run(void)
     uint8_t blue = 50;
 
     for (int i = 0; i < 256; i++) {
-        _neoLed.set_pixel(red, green, blue);
+        _neoLed.set_pixel_rgb(red, green, blue);
         _neoLed.send();
         
         // Gradually increase the red value
@@ -88,7 +88,7 @@ void Main::run(void)
     }
 
     for (int i = 0; i < 256; i++) {
-        _neoLed.set_pixel(red, green, blue);
+        _neoLed.set_pixel_rgb(red, green, blue);
         _neoLed.send();
         
         // Gradually increase the red value

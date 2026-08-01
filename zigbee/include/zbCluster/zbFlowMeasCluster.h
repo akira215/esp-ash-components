@@ -8,7 +8,7 @@
 #pragma once
 
 #include "zbCluster.h"
-#include "zcl\esp_zigbee_zcl_flow_meas.h"
+#include "zcl/esp_zigbee_zcl_flow_meas.h"
 
 #include <esp_log.h> // TODEL development purpose
 

@@ -8,7 +8,7 @@
 #pragma once
 
 #include "zbCluster.h"
-#include "zcl\esp_zigbee_zcl_multistate_value.h"
+#include "zcl/esp_zigbee_zcl_multistate_value.h"
 
 
 class ZbMultistateValueCluster : public ZbCluster
