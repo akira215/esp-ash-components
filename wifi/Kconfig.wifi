@@ -1,0 +1,99 @@
+menu "Wifi Device"
+    
+     config WIFI_SSID
+        string "Wifi Network SSID"
+        default "MyWifi"
+        help
+            Enter SSID of access point on which ESP device should connect, max 32 chars
+
+    config WIFI_PASSWORD
+        string "Wifi password"
+        default "password"
+        help
+            Password for the Wifi network, max 64 chars
+    
+    config  WIFI_MAXIMUM_RETRY
+        int "Max connection retry"
+        range 1 255
+        default 5
+        help
+            The mxmimum number of connection retry
+
+menu "Authentification Mode"
+
+    # GUI menu like choices
+    choice WIFI_AUTH_MODE
+        prompt "Wifi authentification mode"
+        default WIFI_AUTH_WPA2_PSK
+        help
+            Select the authentification mode of your router.
+
+        config WIFI_AUTH_OPEN
+            bool "Open"
+
+        config WIFI_AUTH_WEP
+            bool "WEP"
+
+        config WIFI_AUTH_WPA_PSK
+            bool "WPA_PSK"
+
+        config WIFI_AUTH_WPA2_PSK
+            bool "WPA2_PSK"
+
+        config WIFI_AUTH_WPA_WPA2_PSK
+            bool "WPA_WPA2_PSK"
+
+        config WIFI_AUTH_ENTERPRISE
+            bool "Wi-Fi EAP security"
+
+        config WIFI_AUTH_WPA3_PSK
+            bool "WPA3_PSK"
+
+        config WIFI_AUTH_WPA2_WPA3_PSK
+            bool "WPA2_WPA3_PSK"
+
+        config WIFI_AUTH_WAPI_PSK
+            bool "WAPI_PSK"
+
+        config WIFI_AUTH_OWE
+            bool "OWE"
+
+        config WIFI_AUTH_WPA3_ENT_192
+            bool "WPA3_ENT_SUITE_B_192_BIT"
+
+        config WIFI_AUTH_DPP
+            bool "DPP"
+
+        config WIFI_AUTH_WPA3_ENTERPRISE
+            bool "WPA3-Enterprise Only Mode"
+
+        config WIFI_AUTH_WPA2_WPA3_ENTERPRISE
+            bool "WPA3-Enterprise Transition Mode"
+
+        config WIFI_AUTH_WPA_ENTERPRISE
+            bool "WPA-Enterprise security"
+      
+    endchoice
+
+    # Hidden variable int that get the result
+    config WIFI_AUTH_MODE
+        int
+        default 0  if WIFI_AUTH_OPEN
+        default 1  if WIFI_AUTH_WEP
+        default 2  if WIFI_AUTH_WPA_PSK
+        default 3  if WIFI_AUTH_WPA2_PSK
+        default 4  if WIFI_AUTH_WPA_WPA2_PSK
+        default 5  if WIFI_AUTH_ENTERPRISE
+        default 6  if WIFI_AUTH_WPA3_PSK
+        default 7  if WIFI_AUTH_WPA2_WPA3_PSK
+        default 8  if WIFI_AUTH_WAPI_PSK
+        default 9  if WIFI_AUTH_OWE
+        default 10 if WIFI_AUTH_WPA3_ENT_192
+        default 13 if WIFI_AUTH_DPP
+        default 14 if WIFI_AUTH_WPA3_ENTERPRISE
+        default 15 if WIFI_AUTH_WPA2_WPA3_ENTERPRISE
+        default 16 if WIFI_AUTH_WPA_ENTERPRISE
+
+endmenu
+
+endmenu
