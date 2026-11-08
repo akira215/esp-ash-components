@@ -12,6 +12,24 @@ This repo is intented to be installed in your project directory as a submodule. 
 git submodule add https://github.com/akira215/esp-ash-components.git components
 ```
 
+## ESP component manager
+
+Event if you don't require some component, ESP-IDF compnent manager will search all the idf_component.yml in the directory.
+To avoid getting them in your project you must explicitely excludes them. In your root `CmakeLists.txt` place:
+
+
+```
+set(CMAKE_CXX_STANDARD 23)
+
+
+set(EXTRA_COMPONENT_DIRS periodicTask cppgpio)
+
+set(COMPONENTS   main)
+set(EXCLUDE_COMPONENTS matter zigbee modbus)
+
+include($ENV{IDF_PATH}/tools/cmake/project.cmake)
+project(testWifi)
+```
 
 ## Current Status
 
