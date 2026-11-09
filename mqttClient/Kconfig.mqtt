@@ -1,0 +1,27 @@
+menu "Mqtt Configuration"
+
+    config MQTT_BROKER_URL
+        string "MQTT broker URL"
+        default "mqtt://localhost"
+        help
+            Enter URL or IP address for the MQTT broker server
+    
+    config MQTT_BROKER_PORT
+        int "MQTT broker port"
+        default 1883
+        help
+            Enter the port of the MQTT broker server
+    
+    config MQTT_USERNAME
+        string "MQTT Credential username"
+        default "mqtt-user"
+        help
+            Enter the username to connect to MQTT broker
+
+    config MQTT_PASSWORD
+        string "MQTT Credential password"
+        default "mqtt-password"
+        help
+            Enter the password to connect to MQTT broker
+
+endmenu

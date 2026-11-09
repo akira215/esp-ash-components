@@ -25,7 +25,7 @@ set(CMAKE_CXX_STANDARD 23)
 set(EXTRA_COMPONENT_DIRS periodicTask cppgpio)
 
 set(COMPONENTS   main)
-set(EXCLUDE_COMPONENTS matter zigbee modbus)
+set(EXCLUDE_COMPONENTS matter zigbee modbus mqttClient)
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(testWifi)

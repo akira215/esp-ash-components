@@ -36,9 +36,6 @@ void Wifi::wifi_event_handler(void* arg, esp_event_base_t event_base,
 {
     // getting pointer to the instance of Wifi class
     Wifi* instance = static_cast<Wifi*>(arg);
-    if (instance != nullptr) { 
-        // deal with instance event
-    }
 
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
         esp_wifi_connect();
@@ -49,12 +46,18 @@ void Wifi::wifi_event_handler(void* arg, esp_event_base_t event_base,
             ESP_LOGI(TAG, "retry to connect to the AP");
         } else {
             xEventGroupSetBits(s_wifi_event_group, WIFI_FAIL_BIT);
+            if (instance != nullptr) {
+                instance->_isConnected = false;
+            }
         }
         ESP_LOGI(TAG,"connect to the AP fail");
     } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
         ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
         ESP_LOGI(TAG, "got ip:" IPSTR, IP2STR(&event->ip_info.ip));
         s_retry_num = 0;
+        if (instance != nullptr) {
+                instance->_isConnected = true;
+            }
         xEventGroupSetBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
     }
 }
@@ -101,13 +104,9 @@ void Wifi::wifi_init_sta(void)
                                                       &instance_got_ip));
 
     wifi_config_t wifi_config = {};
-    wifi_config.sta = {
-        .ssid = CONFIG_WIFI_SSID,
-        .password = CONFIG_WIFI_PASSWORD,
-        .threshold={
-            .authmode = static_cast<wifi_auth_mode_t>(CONFIG_WIFI_AUTH_MODE),
-        },
-    };
+    strcpy((char*)wifi_config.sta.ssid, CONFIG_WIFI_SSID);
+    strcpy((char*)wifi_config.sta.password, CONFIG_WIFI_PASSWORD);
+    wifi_config.sta.threshold.authmode = static_cast<wifi_auth_mode_t>(CONFIG_WIFI_AUTH_MODE);
 
 
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));

@@ -1,0 +1,10 @@
+## IDF Component Manager Manifest File
+targets:
+  - esp32c6
+dependencies:
+  espressif/mqtt: "*"
+version: 0.1.0
+description: "C++ mqtt implementation"
+license: "MIT"
+tags:
+  - mqtt

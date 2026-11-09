@@ -24,7 +24,7 @@ endmenu
 
 ```
 
-Main CMakelists.txt should look like this
+Main `CMakelists.txt` should look like this
 ```
 set(SOURCES main.cpp)
 

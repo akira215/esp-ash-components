@@ -10,14 +10,15 @@
 
 class Wifi
 {
+    bool _isConnected = false;
 
 public:
     Wifi();
-
+    bool isConnected() { return _isConnected; }
 
 private:
     void wifi_init_sta(void);
-
+    
     static void wifi_event_handler(void* arg, esp_event_base_t event_base, 
                                    int32_t event_id, void* event_data);
 
