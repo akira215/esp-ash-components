@@ -24,8 +24,6 @@ public:
     using threadCallback_t = std::function<void(esp_openthread_event_t)>;      // event_id
 
 private:
-
-    bool _isConnected       = false;
     otInstance* _instance    = nullptr;
 
     std::vector<threadCallback_t>   _eventHandlers;
@@ -35,11 +33,6 @@ public:
     
     void init();
 
-    bool isConnected() { return _isConnected; }
-    void setConnected(bool connected = true) { _isConnected = connected; }
-
-   
-    
     /// @brief register attribute update handler for this attribute.
     /// Update handler shall be type eventCallback_t : 
     /// void(int msg_id, std::string topic, std::string data)
@@ -58,14 +51,12 @@ public:
         }
     }
 
-    
-
 private:
     static void thread_event_handler(void* arg, esp_event_base_t event_base, 
                                                     int32_t event_id, void* event_data);
     
     static size_t hex_string_to_bytes(const char *hex, uint8_t *bytes, size_t max_len);
-    
 
+    static void thread_loop_task(void *aContext);
 
 }; // Thread Class

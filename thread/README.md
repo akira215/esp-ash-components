@@ -16,6 +16,7 @@ menu "Project Settings"
     orsource "$IDF_PATH/examples/common_components/env_caps/$IDF_TARGET/Kconfig.env_caps"
 
     rsource "./Kconfig.main"
+    rsource "./../components/thread/Kconfig.thread"
     rsource "./../components/mqttClient/Kconfig.mqtt"
 
     comment "Module Debugging"
@@ -31,17 +32,29 @@ set(SOURCES main.cpp)
 
 idf_component_register(SRCS ${SOURCES}
                     INCLUDE_DIRS . 
-                    REQUIRES wifi mqttClient)
+                    REQUIRES mqttClient thread)
 ```
 
+Provide a `sdkconfig.secret` should look like this
+
+```Kconfig
+# MQTT
+CONFIG_MQTT_BROKER_URL="mqtt://[fde4:.....]"
+
+CONFIG_MQTT_USERNAME="mqtt-user"
+CONFIG_MQTT_PASSWORD="mqtt-password"
+
+# OpenThread
+CONFIG_TARGET_THREAD_TLV="0e080000000.............."
+```
 
 ## Code example
 
 ```h
 #pragma once
 
-#include "wifi.h"
 #include "mqttClient.h"
+#include "thread.h"
 
 // Main class used for testing only
 class Main final
@@ -49,30 +62,31 @@ class Main final
 
 public:
     Main();
+
+    void setupThread(void);
+
     void run(void);
     void setup(void);
     void onMqttConnection(bool connected, int res);
     void onMqttData(int msg_id, const std::string& topic, const std::string& data);
+    void threadEvent(esp_openthread_event_t event_id);
 
 private:
-    Wifi*       _wifi = nullptr;
     MqttClient* _mqtt = nullptr;
+    Thread*     _thread = nullptr;
 
 }; // Main Class 
 
 ```
 
 ```cpp
-include "main.h"
+#include "main.h"
 
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
 #include "esp_random.h" //todel
-
-
-
 
 static const char *TAG = "MainApp";
 
@@ -89,13 +103,32 @@ Main::Main()
 
 void Main::setup(void)
 {
-    _wifi = new Wifi();
-    if (_wifi->isConnected()) {
-        _mqtt = new MqttClient();
+    _thread = new Thread();
+    _thread->registerHandler(&Main::threadEvent, this);
+    _thread->init();
+}
+
+void  Main::threadEvent(esp_openthread_event_t event_id)
+{
+   if (event_id == OPENTHREAD_EVENT_GOT_IP6) {
+        bool first = true;
+        if(_mqtt)
+            first = false;
+
+        if(first)
+            _mqtt = new MqttClient();
+        
+        
+        _mqtt->stop();    
         _mqtt->start();
+
+        if(first){
+            _mqtt->registerConnectionHandler(&Main::onMqttConnection, this);
+            _mqtt->registerDataHandler(&Main::onMqttData, this);
+        }
+
     }
-    _mqtt->registerConnectionHandler(&Main::onMqttConnection, this);
-    _mqtt->registerDataHandler(&Main::onMqttData, this);
+   
 }
 
 void Main::onMqttConnection(bool connected, int res)

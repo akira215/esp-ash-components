@@ -11,6 +11,9 @@
 #include "nvs_flash.h"
 #include "esp_netif.h"
 
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+
 #include "esp_openthread_lock.h"
 #include "esp_openthread_netif_glue.h"
 
@@ -83,6 +86,18 @@ void Thread::thread_event_handler(void* arg, esp_event_base_t event_base, int32_
 
     instance->callEventHandlers((esp_openthread_event_t)event_id);
     
+}
+
+//Static
+void Thread::thread_loop_task(void *aContext)
+{
+    ESP_LOGI(TAG, "Launching OpenThread Task");
+    
+    // Blocking function
+    esp_openthread_launch_mainloop();
+    
+    // In case function end, just for safety
+    vTaskDelete(NULL);
 }
 
 
@@ -169,6 +184,6 @@ void Thread::init()
     // Clear NVS storage to ensure a fresh start for the OpenThread stack
     //otInstanceFactoryReset(esp_openthread_get_instance());
 
-    // Launching thread task (Blocking)
-    esp_openthread_launch_mainloop();
+    // Launching thread task in a task as it is Blocking, check stack size and priority
+    xTaskCreate(Thread::thread_loop_task, "OpenThread Loop", 5120, NULL, 5, NULL);
 }
