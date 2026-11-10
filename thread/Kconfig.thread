@@ -1,0 +1,10 @@
+menu "OpenThread Configuration"
+
+    config TARGET_THREAD_TLV
+        string "TLV otf thread network to connect"
+        default "0e0800000..."
+        help
+            Enter the active TVL dataset
+    
+
+endmenu

@@ -1,6 +1,6 @@
 # ESP-IDF MQTT C++
 
-Modbus C++ 
+MQTT C++ 
 
 ## Requirements
 
