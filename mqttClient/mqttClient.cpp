@@ -17,7 +17,8 @@ static const char *TAG = "MqttClient";
 
 
 //static handler
-void MqttClient::mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data)
+void MqttClient::mqtt_event_handler(void *handler_args, esp_event_base_t base, 
+                                                int32_t event_id, void *event_data)
 {
     
     MqttClient* instance = static_cast<MqttClient*>(handler_args);
@@ -41,6 +42,11 @@ void MqttClient::mqtt_event_handler(void *handler_args, esp_event_base_t base, i
             instance->markAllTopicSubscribed(true);
         }
 
+        // Call the registred handlers
+        for (const auto& handler : instance->_connectionHandlers) {
+            handler(true, event->session_present);
+        }
+
         break;
         
     case MQTT_EVENT_DISCONNECTED:
@@ -50,10 +56,16 @@ void MqttClient::mqtt_event_handler(void *handler_args, esp_event_base_t base, i
         // If non persistent session, reset all subscription
         instance->markAllTopicSubscribed(false);
 
+        // Call the registred handlers
+        for (const auto& handler : instance->_connectionHandlers) {
+            handler(false, static_cast<int>(event->error_handle->error_type));
+        }
+
         break;
 
     case MQTT_EVENT_SUBSCRIBED:
-        ESP_LOGI(TAG, "MQTT_EVENT_SUBSCRIBED, msg_id=%d, return code=0x%02x ", event->msg_id, (uint8_t)*event->data);
+        ESP_LOGI(TAG, "MQTT_EVENT_SUBSCRIBED, msg_id=%d, return code=0x%02x ", 
+                                                event->msg_id, (uint8_t)*event->data);
         instance->markTopicSubscribed(std::string(event->topic, event->topic_len), event->msg_id, true); // Mark the topic as subscribed
         break;
         
@@ -64,12 +76,17 @@ void MqttClient::mqtt_event_handler(void *handler_args, esp_event_base_t base, i
         
     case MQTT_EVENT_PUBLISHED:
         ESP_LOGI(TAG, "MQTT_EVENT_PUBLISHED, msg_id=%d", event->msg_id);
+        // TODO implement control that data has been sent
         break;
         
     case MQTT_EVENT_DATA:
         ESP_LOGI(TAG, "MQTT_EVENT_DATA");
-        printf("TOPIC=%.*s\r\n", event->topic_len, event->topic);
-        printf("DATA=%.*s\r\n", event->data_len, event->data);
+       
+        // Call registered data handlers
+        for (const auto& handler : instance->_dataHandlers) {
+            handler(event->msg_id, std::string(event->topic, event->topic_len), 
+                                    std::string(event->data, event->data_len));
+        }
         break;
         
     case MQTT_EVENT_ERROR:
@@ -91,10 +108,7 @@ void MqttClient::mqtt_event_handler(void *handler_args, esp_event_base_t base, i
         break;
     } // switch
 
-    // Call registered event handlers
-    for (const auto& handler : instance->_eventHandlers) {
-        handler(event_id, event->msg_id, std::string(event->topic, event->topic_len), std::string(event->data, event->data_len));
-    }
+    
 }
 
 

@@ -47,6 +47,7 @@ idf_component_register(SRCS ${SOURCES}
 #include "wifi.h"
 #include "mqttClient.h"
 
+// Main class used for testing only
 class Main final
 {
 
@@ -54,17 +55,19 @@ public:
     Main();
     void run(void);
     void setup(void);
+    void onMqttConnection(bool connected, int res);
+    void onMqttData(int msg_id, const std::string& topic, const std::string& data);
 
 private:
     Wifi*       _wifi = nullptr;
     MqttClient* _mqtt = nullptr;
 
-}; // Main Class
+}; // Main Class 
 
 ```
 
 ```cpp
-#include "main.h"
+include "main.h"
 
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
@@ -72,9 +75,13 @@ private:
 
 #include "esp_random.h" //todel
 
+
+
+
 static const char *TAG = "MainApp";
 
 Main App;
+
 
 Main::Main()
 {
@@ -91,8 +98,23 @@ void Main::setup(void)
         _mqtt = new MqttClient();
         _mqtt->start();
     }
+    _mqtt->registerConnectionHandler(&Main::onMqttConnection, this);
+    _mqtt->registerDataHandler(&Main::onMqttData, this);
+}
 
-    _mqtt->subscribeTopic("akira/test1",0);
+void Main::onMqttConnection(bool connected, int res)
+{
+    if (connected) {
+        ESP_LOGI(TAG, "MQTT Connected. Session present: %d", res);
+        _mqtt->subscribeTopic("akira/test1",0);
+    } else {
+        ESP_LOGW(TAG, "MQTT Disconnected. Error type: %d", res);
+    }
+}
+
+void Main::onMqttData(int msg_id, const std::string& topic, const std::string& data)
+{
+    ESP_LOGI(TAG, "MQTT Data received. Message ID: %d, Topic: %s, Data: %s", msg_id, topic.c_str(), data.c_str());
 }
 
 void Main::run(void)
@@ -102,6 +124,7 @@ void Main::run(void)
     _mqtt->sendData("akira/test1", std::to_string(val));
     vTaskDelay(pdMS_TO_TICKS(2000)); // let time to reset watchdog
 }
+
 
 extern "C" void app_main(void)
 {

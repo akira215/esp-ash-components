@@ -15,10 +15,12 @@ class MqttClient
 {
 public:
     /// @brief attribute update callback type
-    using eventCallback_t = std::function<void(int32_t,     // event id
-                                            int,            // msg_id
+    using dataCallback_t = std::function<void(int,          // msg_id
                                             std::string,    // topic
                                             std::string)>;  // data
+    
+    using connectionCallback_t = std::function<void(bool,   // connected
+                                                int)>;      // session_presentdata or event error_handle->error_type
 
 private:
 
@@ -32,8 +34,9 @@ private:
 
     bool _isConnected = false;
     esp_mqtt_client_handle_t _client = nullptr;
-    std::vector<eventCallback_t>    _eventHandlers;
-    std::vector<topic_node_t>       _topics;  
+    std::vector<dataCallback_t>         _dataHandlers;
+    std::vector<connectionCallback_t>   _connectionHandlers;
+    std::vector<topic_node_t>           _topics;  
 
 public:
     MqttClient();
@@ -59,12 +62,22 @@ public:
     
     /// @brief register attribute update handler for this attribute.
     /// Update handler shall be type eventCallback_t : 
-    /// void(int32_t event_id, int msg_id, std::string topic, std::string data)
+    /// void(int msg_id, std::string topic, std::string data)
     /// @param func pointer to the method ex: &Main::eventHandler
     /// @param instance instance of the object for this handler (ex: this)
     template<typename C, typename... Args>
-    void registerAttrUpdateHandler(void (C::* func)(Args...), C* instance){
-        _eventHandlers.push_back([instance, func](Args&&... args) {
+    void registerDataHandler(void (C::* func)(Args...), C* instance){
+        _dataHandlers.push_back([instance, func](Args&&... args) {
+            (instance->*func)(std::forward<Args>(args)...);
+        });
+    }
+    
+    /// @brief register connection handler for this attribute.
+    /// shalle be type connectionCallback_t :
+    /// void(bool connected, int session_present)
+    template<typename C, typename... Args>
+    void registerConnectionHandler(void (C::* func)(Args...), C* instance){
+        _connectionHandlers.push_back([instance, func](Args&&... args) {
             (instance->*func)(std::forward<Args>(args)...);
         });
     }
