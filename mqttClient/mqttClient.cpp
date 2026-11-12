@@ -76,7 +76,10 @@ void MqttClient::mqtt_event_handler(void *handler_args, esp_event_base_t base,
         
     case MQTT_EVENT_PUBLISHED:
         ESP_LOGD(TAG, "MQTT_EVENT_PUBLISHED, msg_id=%d", event->msg_id);
-        // TODO implement control that data has been sent
+        for (const auto& handler : instance->_publishedHandlers) {
+            handler(event->msg_id);
+        }
+
         break;
         
     case MQTT_EVENT_DATA:
@@ -120,8 +123,6 @@ MqttClient::MqttClient()
 
     mqtt_cfg.credentials.username = CONFIG_MQTT_USERNAME;
     mqtt_cfg.credentials.authentication.password = CONFIG_MQTT_PASSWORD;
-
-
 
     _client = esp_mqtt_client_init(&mqtt_cfg);
 
@@ -248,7 +249,7 @@ void MqttClient::sendData(const std::string& topic, const std::string& data, int
     if(!_isConnected)
         return;
 
-    int msg_id =esp_mqtt_client_publish(_client, topic.c_str(), data.c_str(), 0, qos, retain);
+    int msg_id = esp_mqtt_client_publish(_client, topic.c_str(), data.c_str(), 0, qos, retain);
 
 	if (msg_id == 0) 
         ESP_LOGD(TAG, "Sent Data: %s", data.c_str());

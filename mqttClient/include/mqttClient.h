@@ -22,6 +22,8 @@ public:
     using connectionCallback_t = std::function<void(bool,   // connected
                                                 int)>;      // session_presentdata or event error_handle->error_type
 
+     using publishedCallback_t = std::function<void(int)>;  // message id
+
 private:
 
     // @brief topic struct to keep track of the subscribed topics
@@ -36,6 +38,7 @@ private:
     esp_mqtt_client_handle_t _client = nullptr;
     std::vector<dataCallback_t>         _dataHandlers;
     std::vector<connectionCallback_t>   _connectionHandlers;
+    std::vector<publishedCallback_t>    _publishedHandlers;
     std::vector<topic_node_t>           _topics;  
 
 public:
@@ -73,7 +76,7 @@ public:
     }
     
     /// @brief register connection handler for this attribute.
-    /// shalle be type connectionCallback_t :
+    /// shall be type connectionCallback_t :
     /// void(bool connected, int session_present)
     template<typename C, typename... Args>
     void registerConnectionHandler(void (C::* func)(Args...), C* instance){
@@ -81,8 +84,17 @@ public:
             (instance->*func)(std::forward<Args>(args)...);
         });
     }
-
     
+    /// @brief register message published event (QoS)
+    /// shall be type publishedCallback_t :
+    /// void(int)
+    template<typename C, typename... Args>
+    void registerPublishedHandler(void (C::* func)(Args...), C* instance){
+        _publishedHandlers.push_back([instance, func](Args&&... args) {
+            (instance->*func)(std::forward<Args>(args)...);
+        });
+    }
+
     
 
 private:
