@@ -27,11 +27,14 @@ private:
     otInstance* _instance    = nullptr;
 
     std::vector<threadCallback_t>   _eventHandlers;
+    TaskHandle_t _otaTask = nullptr;
 
 public:
     Thread();
     
     void init();
+    void startOtaTask();
+    otInstance* getOtInstance() { return _instance; }
 
     /// @brief register attribute update handler for this attribute.
     /// Update handler shall be type eventCallback_t : 
@@ -58,5 +61,8 @@ private:
     static size_t hex_string_to_bytes(const char *hex, uint8_t *bytes, size_t max_len);
 
     static void thread_loop_task(void *aContext);
+
+    static void thread_ota_task(void *pvParameters);
+    static void ota_rollback_verify_task(void *pvParameters);
 
 }; // Thread Class

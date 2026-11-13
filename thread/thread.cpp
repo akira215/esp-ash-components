@@ -21,6 +21,9 @@
 #include "openthread/logging.h"
 #include "esp_vfs_eventfd.h"
 
+#include "esp_ota_ops.h"
+#include "esp_system.h"
+#include "lwip/sockets.h"
 
 
 static const char *TAG = "Thread";
@@ -54,7 +57,19 @@ void Thread::thread_event_handler(void* arg, esp_event_base_t event_base, int32_
             break;
 
         case OPENTHREAD_EVENT_GOT_IP6:
-            ESP_LOGI(TAG, "OpenThread interface obtained an IPv6 address");
+            {
+                ESP_LOGI(TAG, "OpenThread interface obtained an IPv6 address");
+                const otNetifAddress *unicastAddrs = otIp6GetUnicastAddresses(instance->getOtInstance());
+                for (const otNetifAddress *addr = unicastAddrs; addr; addr = addr->mNext) {
+                    char addr_str[OT_IP6_ADDRESS_STRING_SIZE];
+                    otIp6AddressToString(&addr->mAddress, addr_str, sizeof(addr_str));
+                    // Skip link-local (fe80::) and mesh-local RLOC (0000:00ff:fe00) addresses
+                    if (!addr->mRloc && addr->mAddress.mFields.m8[0] != 0xfe) {
+                        ESP_LOGI("THREAD_IP", "Routable IPv6 Address: %s", addr_str);
+                    }
+                }
+                instance->startOtaTask();
+            }
             break;
         
         case OPENTHREAD_EVENT_ROLE_CHANGED: {
@@ -97,6 +112,169 @@ void Thread::thread_loop_task(void *aContext)
     esp_openthread_launch_mainloop();
     
     // In case function end, just for safety
+    vTaskDelete(NULL);
+}
+
+// Static task that listen to CONFIG_OTA_PORT on an IPv6 UDP port, 
+// receives raw firmware chunks, and flashes them using the ESP-IDF OTA API. 
+// Send an "END" packet from your host script to finalize the update and reboot
+void Thread::thread_ota_task(void *aContext)
+{
+    ESP_LOGI(TAG, "Launching OpenThread OTA listener");
+    
+   int sock = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP);
+    if (sock < 0) {
+        ESP_LOGE(TAG, "Failed to create IPv6 socket");
+        vTaskDelete(NULL);
+    }
+
+    struct sockaddr_in6 server_addr = {};
+    server_addr.sin6_family = AF_INET6;
+    server_addr.sin6_port = htons(CONFIG_OTA_PORT);
+    server_addr.sin6_addr = in6addr_any;
+
+
+    if (bind(sock, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
+        ESP_LOGE(TAG, "Socket bind failed");
+        close(sock);
+        vTaskDelete(NULL);
+    }
+
+    const esp_partition_t *update_partition = esp_ota_get_next_update_partition(NULL);
+    if (update_partition == nullptr) {
+        ESP_LOGE(TAG, "Not able to get the next partition, OTA task will end, OTA impossible");
+        close(sock);
+        vTaskDelete(NULL);
+    }
+
+    esp_ota_handle_t ota_handle = 0;
+    bool ota_started = false;
+
+    uint8_t rx_buffer[CONFIG_OTA_BUFFER_SIZE];
+    struct sockaddr_in6 source_addr;
+    socklen_t socklen = sizeof(source_addr);
+
+    ESP_LOGI(TAG, "Listening for OTA chunks on UDP port %d...", CONFIG_OTA_PORT);
+
+    uint32_t expected_seq = 0;
+
+    while (1) {
+        int len = recvfrom(sock, rx_buffer, sizeof(rx_buffer), 0,
+                        (struct sockaddr *)&source_addr, &socklen);
+        if (len < 0) {
+            ESP_LOGE(TAG, "recvfrom failed");
+            break;
+        }
+
+        // End of transmission
+        if (len == 3 && memcmp(rx_buffer, "END", 3) == 0) {
+            if (ota_started) {
+                if (esp_ota_end(ota_handle) == ESP_OK &&
+                    esp_ota_set_boot_partition(update_partition) == ESP_OK) {
+                    sendto(sock, "OK", 2, 0, (struct sockaddr *)&source_addr, socklen);
+                    ESP_LOGI(TAG, "OTA complete! Rebooting...");
+                    vTaskDelay(pdMS_TO_TICKS(500));
+                    close(sock);
+                    esp_restart();
+                } else {
+                    ESP_LOGE(TAG, "OTA validation or boot partition switch failed");
+                }
+            }
+            break;
+        }
+
+        // Each data packets should contain [4 Bytes SEQ] + [data]
+        if (len <= 4) continue;
+
+        uint32_t seq;
+        memcpy(&seq, rx_buffer, 4);
+        seq = ntohl(seq);
+
+
+        // If packet already received (re sending), send ACK without writing again
+        if (seq < expected_seq) {
+            uint32_t ack = htonl(seq);
+            sendto(sock, &ack, 4, 0, (struct sockaddr *)&source_addr, socklen);
+            continue;
+        }
+
+        // Ignore if futur packet arrive too soon
+        if (seq > expected_seq) {
+            ESP_LOGW(TAG, "Paquet hors séquence : reçu %lu, attendu %lu", seq, expected_seq);
+            continue;
+        }
+
+        if (!ota_started) {
+            if (esp_ota_begin(update_partition, OTA_WITH_SEQUENTIAL_WRITES, &ota_handle) != ESP_OK) {
+                ESP_LOGE(TAG, "esp_ota_begin failed");
+                break;
+            }
+            ota_started = true;
+        }
+
+        // Only write data (ignore 4 bytes of SEQ)
+        if (esp_ota_write(ota_handle, rx_buffer + 4, len - 4) != ESP_OK) {
+            ESP_LOGE(TAG, "esp_ota_write failed");
+            esp_ota_abort(ota_handle);
+            break;
+        }
+
+        // send ACK for this SEQ
+        uint32_t ack = htonl(seq);
+        sendto(sock, &ack, 4, 0, (struct sockaddr *)&source_addr, socklen);
+        expected_seq++;
+    } // while(1)
+
+    close(sock);
+    vTaskDelete(NULL);
+}
+
+
+// Static task to check if OTA was ok,
+// It waits up to 60 seconds for the OpenThread node to attach to the mesh as a Child, Router, or Leader. 
+// If it fails to attach in time, it triggers a rollback.
+void Thread::ota_rollback_verify_task(void *pvParameters)
+{
+    const esp_partition_t *running = esp_ota_get_running_partition();
+    esp_ota_img_states_t ota_state;
+
+    // Check if the running partition is awaiting verification
+    if (esp_ota_get_state_partition(running, &ota_state) != ESP_OK ||
+        ota_state != ESP_OTA_IMG_PENDING_VERIFY) {
+        ESP_LOGI(TAG, "Firmware already verified or running from factory partition.");
+        vTaskDelete(NULL);
+    }
+
+    ESP_LOGW(TAG, "New firmware pending verification. Waiting for Thread network attachment...");
+
+    bool attached = false;
+
+    for (int elapsed = 0; elapsed < CONFIG_THREAD_ATTACH_TIMEOUT_SEC; elapsed++) {
+        // Acquire OpenThread stack lock before calling ot* APIs
+        if (esp_openthread_lock_acquire(pdMS_TO_TICKS(1000))) {
+            otInstance *instance = esp_openthread_get_instance();
+            otDeviceRole role = otThreadGetDeviceRole(instance);
+            esp_openthread_lock_release();
+
+            if (role == OT_DEVICE_ROLE_CHILD ||
+                role == OT_DEVICE_ROLE_ROUTER ||
+                role == OT_DEVICE_ROLE_LEADER) {
+                attached = true;
+                break;
+            }
+        }
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
+
+    if (attached) {
+        ESP_LOGI(TAG, "Attached to Thread network! Marking firmware as valid.");
+        esp_ota_mark_app_valid_cancel_rollback();
+    } else {
+        ESP_LOGE(TAG, "Failed to attach within %d seconds! Rolling back to previous firmware...",
+                 CONFIG_THREAD_ATTACH_TIMEOUT_SEC);
+        esp_ota_mark_app_invalid_rollback_and_reboot();
+    }
+
     vTaskDelete(NULL);
 }
 
@@ -186,4 +364,14 @@ void Thread::init()
 
     // Launching thread task in a task as it is Blocking, check stack size and priority
     xTaskCreate(Thread::thread_loop_task, "OpenThread Loop", 5120, NULL, 5, NULL);
+}
+
+
+void Thread::startOtaTask()
+{
+    if ((!_otaTask)&&(CONFIG_OTA_ENABLE))
+    {
+        xTaskCreate(Thread::thread_ota_task, "thread_ota_task", 4096, NULL, 5, &_otaTask);
+        xTaskCreate(Thread::ota_rollback_verify_task, "ota_verify", 3072, NULL, 5, NULL);
+    }
 }

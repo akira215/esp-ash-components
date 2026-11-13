@@ -6,5 +6,28 @@ menu "OpenThread Configuration"
         help
             Enter the active TVL dataset
     
+     config OTA_ENABLE
+        bool "Enable OTA on thread for this device"
+        default y
+        help
+            Enter the OTA port use by the server to send OTA on this device
+    
+    config OTA_PORT
+        int "Port on which OTA will be send to the device"
+        default 3333
+        help
+            Enter the OTA port use by the server to send OTA on this device
+    
+    config OTA_BUFFER_SIZE
+        int "OTA buffer size"
+        default 1024
+        help
+            Enter the OTA buffer size
+    
+     config THREAD_ATTACH_TIMEOUT_SEC
+        int "Timemout to check if an OTA succeed"
+        default 60
+        help
+            After this delay, if device is not attached to the thread network, it rollback to previous firmware
 
 endmenu
