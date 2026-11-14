@@ -252,7 +252,7 @@ void MqttClient::sendData(const std::string& topic, const std::string& data, int
     int msg_id = esp_mqtt_client_publish(_client, topic.c_str(), data.c_str(), 0, qos, retain);
 
 	if (msg_id == 0) 
-        ESP_LOGD(TAG, "Sent Data: %s", data.c_str());
+        ESP_LOGV(TAG, "Sent Data: %s", data.c_str());
 	else 
         ESP_LOGD(TAG, "Error msg_id:%d while sending data", msg_id);
 }
