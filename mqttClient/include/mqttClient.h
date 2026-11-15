@@ -4,12 +4,14 @@
   License: GNU GENERAL PUBLIC LICENSE Version 3, 29 June 2007
   Author: Akira Shimahara
 */
+
+#pragma once
+
 #include "mqtt_client.h"
 #include <string>
 #include <functional>
 
-#pragma once
-
+#include "eventLoop.h"
 
 class MqttClient
 {
@@ -22,7 +24,7 @@ public:
     using connectionCallback_t = std::function<void(bool,   // connected
                                                 int)>;      // session_presentdata or event error_handle->error_type
 
-     using publishedCallback_t = std::function<void(int)>;  // message id
+    using publishedCallback_t = std::function<void(int)>;  // message id
 
 private:
 
@@ -40,6 +42,8 @@ private:
     std::vector<connectionCallback_t>   _connectionHandlers;
     std::vector<publishedCallback_t>    _publishedHandlers;
     std::vector<topic_node_t>           _topics;  
+
+    static EventLoop*  _eventLoop;
 
 public:
     MqttClient();
@@ -101,6 +105,6 @@ private:
     static void mqtt_event_handler(void *handler_args, esp_event_base_t base, 
                                         int32_t event_id, void *event_data);
     
-
+    void postData(int msgId, std::string topic, std::string data);
 
 }; // MqttClient Class

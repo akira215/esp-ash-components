@@ -15,6 +15,8 @@
 
 static const char *TAG = "MqttClient";
 
+EventLoop* MqttClient::_eventLoop = new EventLoop("MqttEventLoop");
+
 
 //static handler
 void MqttClient::mqtt_event_handler(void *handler_args, esp_event_base_t base, 
@@ -86,10 +88,13 @@ void MqttClient::mqtt_event_handler(void *handler_args, esp_event_base_t base,
         ESP_LOGD(TAG, "MQTT_EVENT_DATA");
        
         // Call registered data handlers
+        instance->postData(event->msg_id, std::string(event->topic, event->topic_len),
+                                            std::string(event->data, event->data_len));
+                                            /*
         for (const auto& handler : instance->_dataHandlers) {
             handler(event->msg_id, std::string(event->topic, event->topic_len), 
                                     std::string(event->data, event->data_len));
-        }
+        }*/
         break;
         
     case MQTT_EVENT_ERROR:
@@ -255,4 +260,15 @@ void MqttClient::sendData(const std::string& topic, const std::string& data, int
         ESP_LOGV(TAG, "Sent Data: %s", data.c_str());
 	else 
         ESP_LOGD(TAG, "Error msg_id:%d while sending data", msg_id);
+}
+
+
+/// post data////////////////////////////////////////
+void MqttClient::postData(int msgId, std::string topic, std::string data)
+{
+    // Call all the registered callback Id
+    for (auto & cb : _dataHandlers) {
+        _eventLoop->enqueue(std::bind(std::ref(cb), msgId, topic, data));
+    }
+    
 }

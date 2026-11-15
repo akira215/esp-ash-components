@@ -30,9 +30,9 @@ could be reported to try to improve it.
 ```h
 #pragma once
 
-#include "persistedValue.h" 
+#include "eventLoop.h"
 
-#define HA_ESP_SENSOR_ENDPOINT          10      /* esp temperature sensor device endpoint, used for temperature measurement */
+
 // Main class used for testing only
 class Main final
 {
@@ -41,7 +41,7 @@ public:
     void run(void);
     void setup(void);
 private:
-    PersistedValue<int8_t> testNVM;
+    static EventLoop*  _eventLoop;
 
 }; // Main Class
 ```
@@ -60,6 +60,7 @@ private:
 static const char *TAG = "Main_app";
 
 Main App;
+EventLoop* Main::_eventLoop = new EventLoop("MainEventLoop");
 
 Main::Main():testNVM("test")
 {
@@ -70,14 +71,21 @@ void Main::setup(void)
 {
     ESP_LOGI(TAG,"App is starting");
    
-    ESP_LOGI(TAG,"testNVS %d",(uint8_t) testNVM);
 
-    testNVM = 67;
+
+    _eventLoop->enqueue(std::bind(std::ref(*cb), type, effectId, effectVariant, std::move(priv_data)));
    
-    ESP_LOGI(TAG,"after setting testNVS %d",(uint8_t) testNVM);
 
-    testNVM.save();
 
+}
+
+void Main::postEvent(nodeEvent_t event)
+{
+    // Call all the registered callback Id
+    for (auto & cb : _nodeEventHandlers) {
+        ZbNode::_eventLoop->enqueue(std::bind(std::ref(cb), event));
+    }
+    
 }
 
 void Main::run(void)
