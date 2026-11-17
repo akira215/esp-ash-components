@@ -31,6 +31,9 @@ void MqttClient::mqtt_event_handler(void *handler_args, esp_event_base_t base,
     //int msg_id;
 
     switch ((esp_mqtt_event_id_t)event_id) {
+    case MQTT_EVENT_BEFORE_CONNECT:
+        ESP_LOGD(TAG, "MQTT_EVENT_BEFORE_CONNECT");
+        break;
     case MQTT_EVENT_CONNECTED:
         ESP_LOGD(TAG, "MQTT_EVENT_CONNECTED");
         instance->setConnected();
